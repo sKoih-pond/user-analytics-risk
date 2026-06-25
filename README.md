@@ -54,7 +54,7 @@ docs/        jd_mapping.md, learning_path.md
 **IEEE-CIS Fraud Detection** (Kaggle competition) — real `isFraud` labels + card/device/email identity features. Canonical grain: `raw.transactions`; aggregated to a `client_id` (card1 + addr1 proxy — IEEE-CIS has no explicit user id). See `data/README.md`.
 
 ## Results
-Phase 1 **run on real IEEE-CIS data** (2026-06-25): 590,540 txns → dbt marts (tested) → segmentation + tagging + a supervised fraud model (**PR-AUC 0.524** baseline). See **[`docs/results.md`](docs/results.md)** + charts in `docs/charts/`. A Metabase dashboard was built via API as a demo; the **durable** artifacts are this repo + the PNG charts (Metabase trial is ephemeral — nothing should link to it).
+Phase 1 **run on real IEEE-CIS data** (2026-06-25): 590,540 txns → dbt marts (tested) → segmentation + tagging + a supervised fraud model (**PR-AUC 0.617**, numeric + categoricals). See **[`docs/results.md`](docs/results.md)** + charts in `docs/charts/`. A Metabase dashboard was built via API as a demo; the **durable** artifacts are this repo + the PNG charts (Metabase trial is ephemeral — nothing should link to it).
 
 ## Status
 Phase 1 done. Next: strengthen the fraud model (V-cols/categoricals/threshold), Phase 2 abuse rings, write-up screenshots. Tracks to Employment Task #7 and the Binance application.

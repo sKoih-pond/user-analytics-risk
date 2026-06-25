@@ -20,9 +20,10 @@ Three families — **value** (vip/high/mid/low), **lifecycle** (active/dormant/n
 - `multi_identity` (**3.2%**) and `high_velocity` (**2.8%**) sit **at or below** the 3.5% base rate. So naive identity/velocity heuristics **do not** concentrate fraud here. That's the point: simple rules look plausible but don't earn trust — the supervised model has to.
 
 ## Fraud model (HistGradientBoosting, transaction-level)
-- **PR-AUC 0.524** (vs 0.035 random baseline); precision **0.85** / recall **0.31** on fraud at the default 0.5 threshold.
-- **Honest baseline:** only ~10 raw features (amount + C/D counts) of IEEE-CIS's 400+. Kaggle leaders reached ~0.93 AUC with the full V-columns + heavy engineering. Discipline carried from the IDS capstone: report **PR-AUC + the precision/recall trade-off on the rare class**, not headline accuracy.
-- **Next gains:** add V/identity features, encode categoricals (card type, email domain), tune the threshold off the precision/recall curve.
+- **PR-AUC 0.617** (vs 0.035 random baseline); precision **0.875** / recall **0.383** on fraud at the default 0.5 threshold; **1,754** clients flagged.
+- Features: numeric (amount + C/D counts) **+ categoricals** (card type/network, product code, email domain, device type) via HistGBM's native categorical support — adding the categoricals lifted PR-AUC from a numeric-only **0.524** to **0.617**.
+- **Honest baseline:** still uses a curated subset, not IEEE-CIS's full 400+ V-columns. Kaggle leaders reached ~0.93 AUC with the full V-columns + heavy engineering. Discipline carried from the IDS capstone: report **PR-AUC + the precision/recall trade-off on the rare class**, not headline accuracy.
+- **Next gains:** load the V/identity columns, threshold tuning off the precision/recall curve, time-based validation split.
 
 ## Limitations (interview-ready)
 Client id is an approximation; baseline feature set by design; `confirmed_fraud` tag is label-derived. The value here is a **trustworthy, reproducible pipeline** (dbt-tested) with an evaluation that interrogates its own signals — not a leaderboard score.
