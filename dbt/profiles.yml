@@ -1,0 +1,12 @@
+# DuckDB warehouse (file-based). Run dbt from the dbt/ dir with:
+#   DBT_PROFILES_DIR=.  dbt build
+# Path is relative to the dbt/ dir -> <project_root>/platform.duckdb (same file the
+# Python scripts use via src/db.py). schema 'dbt' -> models land in dbt_staging / dbt_marts.
+user_analytics_risk:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ../platform.duckdb
+      schema: dbt
+      threads: 4

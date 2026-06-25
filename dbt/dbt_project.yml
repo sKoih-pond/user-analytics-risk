@@ -1,0 +1,17 @@
+name: user_analytics_risk
+version: "1.0.0"
+config-version: 2
+profile: user_analytics_risk
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  user_analytics_risk:
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: marts

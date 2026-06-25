@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: user_features
+    description: "One row per client (card1+addr1 proxy) with behavioural + risk features."
+    columns:
+      - name: client_id
+        description: "User proxy (card1 + addr1). Approximation — IEEE-CIS has no explicit user id."
+        tests: [unique, not_null]
+      - name: frequency
+        tests: [not_null]
+      - name: fraud_rate
+        description: "Share of the client's transactions labelled fraud."
+        tests: [not_null]

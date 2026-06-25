@@ -1,0 +1,21 @@
+# Warehouse: DuckDB (file-based, no server). Metabase (BI) is optional/later via Docker.
+duckdb>=1.1
+dbt-core>=1.7
+dbt-duckdb>=1.7
+
+# Core analytics
+pandas>=2.0
+numpy>=1.26
+scikit-learn>=1.4
+python-dotenv>=1.0
+
+# Phase 2 (abuse-ring / graph)
+networkx>=3.2
+
+# Notebooks
+jupyter>=1.0
+matplotlib>=3.8
+seaborn>=0.13
+
+# Data download
+kagglehub>=0.3

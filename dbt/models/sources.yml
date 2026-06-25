@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    description: "IEEE-CIS Fraud transactions (train_transaction joined to train_identity), loaded by src/load_ieee.py."
+    tables:
+      - name: transactions

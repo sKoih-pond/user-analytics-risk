@@ -1,0 +1,25 @@
+# Postgres (warehouse for dbt + analytics) + Metabase (BI).
+# Single warehouse so dbt and Metabase read the same data.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: analytics
+      POSTGRES_PASSWORD: analytics
+      POSTGRES_DB: platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  metabase:
+    image: metabase/metabase:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    # On first run, open http://localhost:3000 and connect a database:
+    #   Host: postgres  Port: 5432  DB: platform  User: analytics  Pass: analytics
+
+volumes:
+  pgdata:
