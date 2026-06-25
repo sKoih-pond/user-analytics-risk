@@ -1,39 +1,38 @@
 """
-BLACK-BOX comparison model — the deliberate counterpoint to model_explainable.py.
+BLACK-BOX comparison — the explainable model PLUS the 339 anonymised V-columns.
 
-Uses every numeric column INCLUDING the 339 anonymised V-features (Vesta's secret
-engineered signals). Same TIME-BASED split, same metric. The point is NOT to ship this
-— it's to MEASURE the performance you give up by refusing features you can't explain.
-You can't tell an interviewer why "V257" flagged an account; you can for the explainable
-model. This script quantifies that trade-off honestly.
+Fair test: same features, same time-split as model_explainable.py, then ADD every V-column.
+The PR-AUC gap is exactly what the un-explainable features buy on top of a strong,
+fully-explainable model. The point is to MEASURE the trade-off, not to ship this.
 """
+import re
 import numpy as np
-import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.metrics import average_precision_score, precision_score, recall_score
+from sklearn.metrics import average_precision_score, roc_auc_score, precision_score, recall_score
 from db import get_con
+from model_explainable import prepare, build_X, NUMERIC, CATEGORICAL
 
 
 def main():
     con = get_con()
-    # all numeric V / C / D columns + amount, ordered by time
-    df = con.execute("""
-        SELECT isFraud AS y, transactiondt AS dt, transactionamt AS amount,
-               COLUMNS('^[VCD][0-9]+$')
-        FROM raw.transactions
-    """).df()
+    df, _ = prepare(con)
+    V = con.execute("SELECT transactionid tid, COLUMNS('^V[0-9]+$') FROM raw.transactions").df()
+    V.columns = ["tid"] + [c.lower() for c in V.columns[1:]]
+    df = df.merge(V, on="tid", how="left")
     con.close()
-    df = df.sort_values("dt").reset_index(drop=True)
-    feats = [c for c in df.columns if c not in ("y", "dt")]
-    X = df[feats].astype("float32")
-    y = df["y"].astype(int).values
-    print(f"black-box features: {len(feats)} (incl. {sum(c.upper().startswith('V') for c in feats)} anonymised V-columns)")
 
-    cut = int(len(df) * 0.70)
-    Xtr, Xte, ytr, yte = X.iloc[:cut], X.iloc[cut:], y[:cut], y[cut:]
-    clf = HistGradientBoostingClassifier(max_iter=300, learning_rate=0.08, random_state=42).fit(Xtr, ytr)
+    vcols = [c for c in df.columns if re.fullmatch(r"v\d+", c)]
+    train = df.transactiondt <= df.transactiondt.quantile(0.70)
+    X = build_X(df, NUMERIC + vcols, CATEGORICAL)
+    y = df["y"].astype(int)
+    Xtr, Xte, ytr, yte = X[train], X[~train], y[train], y[~train]
+    print(f"black-box features: {X.shape[1]} (explainable + {len(vcols)} anonymised V-columns)")
+
+    clf = HistGradientBoostingClassifier(categorical_features="from_dtype",
+                                         max_iter=500, learning_rate=0.05, random_state=42).fit(Xtr, ytr)
     p = clf.predict_proba(Xte)[:, 1]
-    print(f"\nPR-AUC (black-box): {average_precision_score(yte, p):.4f}")
+    print(f"\nPR-AUC  (black-box): {average_precision_score(yte, p):.4f}")
+    print(f"ROC-AUC (black-box): {roc_auc_score(yte, p):.4f}")
     print("\noperating points:")
     print(f"  {'flag %':>7} {'precision':>9} {'recall':>7}")
     for q in [0.005, 0.01, 0.02, 0.05]:

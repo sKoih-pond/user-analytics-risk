@@ -50,10 +50,10 @@ ax.set_title("Fraud rate by segment"); ax.set_xlabel("segment"); ax.set_ylabel("
 # 5. Explainable vs black-box (measured PR-AUC on the same time-based split;
 #    reproduce via src/model_explainable.py and src/model_blackbox.py)
 fig, ax = plt.subplots(figsize=(5.5, 4))
-bars = ax.bar(["Explainable\n(production)", "Black-box\n(+339 V-cols)"], [0.470, 0.501],
+bars = ax.bar(["Explainable\n(production)", "Black-box\n(+339 V-cols)"], [0.525, 0.538],
               color=["#54A24B", "#9D9D9D"])
-ax.bar_label(bars, fmt="%.3f"); ax.set_ylim(0, 0.6); ax.set_ylabel("PR-AUC (time-split)")
-ax.set_title("Explainability costs only 0.03 PR-AUC")
+ax.bar_label(bars, fmt="%.3f"); ax.set_ylim(0, 0.65); ax.set_ylabel("PR-AUC (time-split)")
+ax.set_title("339 anonymised features add only 0.013 PR-AUC")
 save(fig, "model_comparison.png")
 
 con.close()

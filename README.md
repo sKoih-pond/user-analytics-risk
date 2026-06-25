@@ -43,7 +43,7 @@ python src/model_blackbox.py        # black-box comparison (quantifies the trade
 
 ## Structure
 ```
-src/         load_ieee.py, segmentation.py, tagging.py, model_explainable.py, model_blackbox.py, abuse_rings.py(P2), make_charts.py, db.py
+src/         load_ieee.py, explore_features.py, segmentation.py, tagging.py, model_explainable.py, model_blackbox.py, abuse_rings.py(P2), make_charts.py, db.py
 dbt/         dbt_project.yml, profiles.yml, models/{staging/stg_transactions, marts/user_features}, schema.yml
 data/        raw/ (gitignored — IEEE-CIS CSVs) + README (dataset + download)
 notebooks/   exploratory Jupyter work
@@ -55,7 +55,7 @@ docs/        approach_and_decisions.md, results.md, jd_mapping.md, learning_path
 **IEEE-CIS Fraud Detection** (Kaggle competition) — real `isFraud` labels + card/device/email identity features. Canonical grain: `raw.transactions`; aggregated to a `client_id` (card1 + addr1 proxy — IEEE-CIS has no explicit user id). See `data/README.md`.
 
 ## Results
-Phase 1 **run on real IEEE-CIS data** (2026-06-25): 590,540 txns → dbt marts (tested) → segmentation + tagging + an **explainable, time-validated fraud model**. Headline: the explainable model (interpretable features only) scores **PR-AUC 0.47**; a black-box using all 339 anonymised columns scores **0.50** — so explainability costs only **0.03**, and ships. Full reasoning in **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**; numbers + charts in **[`docs/results.md`](docs/results.md)**. A Metabase dashboard was built as a demo; the **durable** artifacts are this repo + the PNG charts (the Metabase trial is ephemeral — nothing links to it).
+Phase 1 **run on real IEEE-CIS data** (2026-06-25): 590,540 txns → dbt marts (tested) → segmentation + tagging + an **explainable, time-validated fraud model**. Headline: the explainable model (only *documented* features + engineered customer-id/baseline) scores **PR-AUC 0.525 / ROC-AUC 0.90**; adding all 339 anonymised columns lifts PR-AUC by just **0.013** (ROC-AUC 0.000) — so explainability is effectively free, and the model I can defend ships. Full reasoning in **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**; numbers + charts in **[`docs/results.md`](docs/results.md)**. A Metabase dashboard was built as a demo; the **durable** artifacts are this repo + the PNG charts (the Metabase trial is ephemeral — nothing links to it).
 
 ## Status
 Phase 1 done. Next (non-blocking): Phase 2 ring detection, a productionised alert threshold, cohort/A-B analysis. Tracks to Employment Task #7 and the Binance application.
