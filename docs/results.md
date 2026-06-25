@@ -19,11 +19,19 @@ Three families — **value** (vip/high/mid/low), **lifecycle** (active/dormant/n
 - `confirmed_fraud` clients: **36.7%** fraud rate — but this tag is **derived from the label**, so it's partly circular; not a discovery.
 - `multi_identity` (**3.2%**) and `high_velocity` (**2.8%**) sit **at or below** the 3.5% base rate. So naive identity/velocity heuristics **do not** concentrate fraud here. That's the point: simple rules look plausible but don't earn trust — the supervised model has to.
 
-## Fraud model (HistGradientBoosting, transaction-level)
-- **PR-AUC 0.617** (vs 0.035 random baseline); precision **0.875** / recall **0.383** on fraud at the default 0.5 threshold; **1,754** clients flagged.
-- Features: numeric (amount + C/D counts) **+ categoricals** (card type/network, product code, email domain, device type) via HistGBM's native categorical support — adding the categoricals lifted PR-AUC from a numeric-only **0.524** to **0.617**.
-- **Honest baseline:** still uses a curated subset, not IEEE-CIS's full 400+ V-columns. Kaggle leaders reached ~0.93 AUC with the full V-columns + heavy engineering. Discipline carried from the IDS capstone: report **PR-AUC + the precision/recall trade-off on the rare class**, not headline accuracy.
-- **Next gains:** load the V/identity columns, threshold tuning off the precision/recall curve, time-based validation split.
+## Fraud model — explainable vs black-box (see `docs/approach_and_decisions.md`)
+Built two models on the **same time-based split** (train on earlier 70%, test on later 30% — no peeking at the future):
+
+| Model | Features | PR-AUC (time-split) |
+|---|---|---|
+| **Explainable (production)** | interpretable only — amount, association counts, recency, match flags, card/email/device + engineered device/email-sharing | **0.470** |
+| Black-box (comparison) | + all **339 anonymised V-columns** | 0.501 |
+
+**The headline decision:** the 339 opaque features buy only **+0.03 PR-AUC**. Not worth losing the ability to explain a fraud decision — so the explainable model ships. ![model comparison](charts/model_comparison.png)
+
+- **Honesty note:** on a *random* split this model scored 0.62; tested honestly **forward in time** it's **0.47**. The 0.47 is the real number. Random splitting inflates fraud results by letting the model see the future.
+- **Operating points** (set the alarm on cost, not 0.5): flag the riskiest 1% → precision 0.84 / recall 0.24; 2% → 0.66 / 0.38; 5% → 0.37 / 0.53.
+- **Top drivers** (all explainable): association counts (C1/C14/C2/C5/C13), product code, email domain, amount, recency.
 
 ## Limitations (interview-ready)
 Client id is an approximation; baseline feature set by design; `confirmed_fraud` tag is label-derived. The value here is a **trustworthy, reproducible pipeline** (dbt-tested) with an evaluation that interrogates its own signals — not a leaderboard score.

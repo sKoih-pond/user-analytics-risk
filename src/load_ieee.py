@@ -1,41 +1,31 @@
 """
-Load IEEE-CIS Fraud Detection into DuckDB `raw.transactions`.
+Load IEEE-CIS Fraud Detection into DuckDB `raw.transactions` — FULL column set.
 
-Expects the competition files in data/raw/ :
-    train_transaction.csv   (label + transaction features)
-    train_identity.csv      (device / browser features; optional, left-joined)
+Loads every column (so the explainable model can pick interpretable features and the
+black-box comparison can use the opaque V-columns). DuckDB reads the CSVs natively
+(memory-efficient; no full pandas load). train_transaction left-joined to train_identity.
 """
-import os
-import pandas as pd
-from db import get_con, write_table
+from db import get_con
 
 RAW = "data/raw"
 
-# Curated columns (the full set has 400+ V-columns; we keep a defensible analyst subset).
-TXN_COLS = ["TransactionID", "isFraud", "TransactionDT", "TransactionAmt", "ProductCD",
-            "card1", "card4", "card6", "addr1", "P_emaildomain", "R_emaildomain",
-            "C1", "C2", "C5", "C13", "C14", "D1", "D4", "D10", "D15"]
-ID_COLS = ["TransactionID", "DeviceType", "DeviceInfo", "id_30", "id_31", "id_33"]
-
 
 def main():
-    txn = pd.read_csv(f"{RAW}/train_transaction.csv", usecols=TXN_COLS)
-    id_path = f"{RAW}/train_identity.csv"
-    if os.path.exists(id_path):
-        idn = pd.read_csv(id_path, usecols=ID_COLS)
-        df = txn.merge(idn, on="TransactionID", how="left")
-    else:
-        print("note: train_identity.csv not found — loading without device/identity features")
-        df = txn
-
-    df.columns = [c.lower() for c in df.columns]   # dbt models expect lowercase
-
     con = get_con()
-    write_table(con, df, "raw", "transactions")
-    n, fraud = len(df), int(df["isfraud"].sum())
+    con.execute("CREATE SCHEMA IF NOT EXISTS raw")
+    con.execute(f"""
+        CREATE OR REPLACE TABLE raw.transactions AS
+        SELECT t.*, i.* EXCLUDE (TransactionID)
+        FROM read_csv_auto('{RAW}/train_transaction.csv', sample_size=-1) t
+        LEFT JOIN read_csv_auto('{RAW}/train_identity.csv', sample_size=-1) i
+          USING (TransactionID)
+    """)
+    n, cols = con.execute("select count(*), count(*) from raw.transactions").fetchone()[0], \
+        len(con.execute("describe raw.transactions").df())
+    fraud = con.execute("select avg(isFraud) from raw.transactions").fetchone()[0]
     con.close()
-    print(f"raw.transactions: {n:,} rows x {df.shape[1]} cols")
-    print(f"fraud rate: {fraud / n:.4f}  ({fraud:,} fraud)")
+    print(f"raw.transactions: {n:,} rows x {cols} columns")
+    print(f"fraud rate: {fraud:.4f}")
 
 
 if __name__ == "__main__":

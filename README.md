@@ -11,7 +11,7 @@ Maps almost line-by-line to the kind of work it showcases — user tagging syste
 
 ## Phases
 - **Phase 1 — core (also closes the dbt + Metabase skill gap):**
-  transactions → dbt models (`staging` → user-level `marts`) → **RFM + KMeans segmentation** → **user-tagging system** (value / lifecycle / risk tags) → **anomaly/fraud model** (Isolation Forest, then a supervised classifier) → **Metabase** dashboard.
+  transactions → dbt models (`staging` → user-level `marts`) → **RFM + KMeans segmentation** → **user-tagging system** (value / lifecycle / risk tags) → **explainable fraud model** (time-validated) + a **black-box comparison** → **Metabase** dashboard. Design rationale: **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**.
 - **Phase 2 — differentiators:**
   **bonus/promo-abuse ring detection** (multi-account / graph community detection) + **cohort, retention & a mock A/B test**. Optionally re-run on **BigQuery** to claim it honestly.
 
@@ -34,7 +34,8 @@ cd dbt && DBT_PROFILES_DIR=. dbt build && cd ..   # staging + marts, runs tests
 # 5. Analytics (Python)
 python src/segmentation.py                 # RFM + KMeans -> user_segments
 python src/tagging.py                      # value/lifecycle/risk tags -> user_tags
-python src/anomaly.py                      # supervised fraud model (PR-AUC) -> txn_risk + user_risk
+python src/model_explainable.py     # explainable model (time-split) -> txn_risk + user_risk
+python src/model_blackbox.py        # black-box comparison (quantifies the trade-off)
 
 # 6. (Optional) BI: Metabase via Docker/Java connected to platform.duckdb (community DuckDB driver),
 #    or Looker Studio on a CSV export. Spec in dashboards/metabase_setup.md. Charts also fine in notebooks/.
@@ -42,19 +43,19 @@ python src/anomaly.py                      # supervised fraud model (PR-AUC) -> 
 
 ## Structure
 ```
-src/         load_ieee.py, segmentation.py, tagging.py, anomaly.py, abuse_rings.py(P2), db.py
+src/         load_ieee.py, segmentation.py, tagging.py, model_explainable.py, model_blackbox.py, abuse_rings.py(P2), make_charts.py, db.py
 dbt/         dbt_project.yml, profiles.yml, models/{staging/stg_transactions, marts/user_features}, schema.yml
 data/        raw/ (gitignored — IEEE-CIS CSVs) + README (dataset + download)
 notebooks/   exploratory Jupyter work
 dashboards/  metabase_setup.md (connection + dashboard spec)
-docs/        jd_mapping.md, learning_path.md
+docs/        approach_and_decisions.md, results.md, jd_mapping.md, learning_path.md, charts/
 ```
 
 ## Data
 **IEEE-CIS Fraud Detection** (Kaggle competition) — real `isFraud` labels + card/device/email identity features. Canonical grain: `raw.transactions`; aggregated to a `client_id` (card1 + addr1 proxy — IEEE-CIS has no explicit user id). See `data/README.md`.
 
 ## Results
-Phase 1 **run on real IEEE-CIS data** (2026-06-25): 590,540 txns → dbt marts (tested) → segmentation + tagging + a supervised fraud model (**PR-AUC 0.617**, numeric + categoricals). See **[`docs/results.md`](docs/results.md)** + charts in `docs/charts/`. A Metabase dashboard was built via API as a demo; the **durable** artifacts are this repo + the PNG charts (Metabase trial is ephemeral — nothing should link to it).
+Phase 1 **run on real IEEE-CIS data** (2026-06-25): 590,540 txns → dbt marts (tested) → segmentation + tagging + an **explainable, time-validated fraud model**. Headline: the explainable model (interpretable features only) scores **PR-AUC 0.47**; a black-box using all 339 anonymised columns scores **0.50** — so explainability costs only **0.03**, and ships. Full reasoning in **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**; numbers + charts in **[`docs/results.md`](docs/results.md)**. A Metabase dashboard was built as a demo; the **durable** artifacts are this repo + the PNG charts (the Metabase trial is ephemeral — nothing links to it).
 
 ## Status
-Phase 1 done. Next: strengthen the fraud model (V-cols/categoricals/threshold), Phase 2 abuse rings, write-up screenshots. Tracks to Employment Task #7 and the Binance application.
+Phase 1 done. Next (non-blocking): Phase 2 ring detection, a productionised alert threshold, cohort/A-B analysis. Tracks to Employment Task #7 and the Binance application.
