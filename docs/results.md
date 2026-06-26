@@ -1,6 +1,6 @@
 # Results — User Analytics & Risk
 
-Real run on **IEEE-CIS Fraud Detection** (Kaggle). Warehouse: DuckDB and BigQuery · transforms: **dbt** (layered, tested, documented) · analytics: Python · BI: Metabase + Looker Studio. All numbers below are from the live pipeline.
+Real run on **IEEE-CIS Fraud Detection** (Kaggle). Warehouse: DuckDB and BigQuery · transforms: **dbt** (layered, tested, documented) · analytics: Python · BI: Looker Studio on BigQuery (+ static PNG tiles in `charts/`). All numbers below are from the live pipeline.
 
 ## Data
 - 590,540 transactions, **3.5% fraud** (20,663). Aggregated by dbt to **39,974 clients** (`card1 + addr1` proxy — IEEE-CIS has no explicit user id; documented approximation). Client-level base fraud rate **3.16%**.

@@ -2,7 +2,7 @@
 
 End-to-end analytics project on a real payments/e-commerce transaction base (**IEEE-CIS Fraud**): **profile users, segment them, tag them, and detect fraud/abuse.** Built to mirror a Data-Analyst (Risk) brief and to demonstrate the modern analyst stack (SQL + **dbt** + Python + **Metabase**).
 
-Stack: **dbt** (layered, tested, documented transformations) · **DuckDB** (local warehouse) and **BigQuery** (free cloud sandbox) — the same dbt project runs on both · **Python** (pandas, scikit-learn) for the ML · **Metabase** + **Looker Studio** (BI dashboards).
+Stack: **dbt** (layered, tested, documented transformations) · **DuckDB** (local warehouse) and **BigQuery** (free cloud sandbox) — the same dbt project runs on both · **Python** (pandas, scikit-learn) for the ML · **Looker Studio** on BigQuery (free, permanent BI dashboard).
 
 **Result: an explainable, time-validated fraud model — ROC-AUC 0.913 / PR-AUC 0.540 — matching a 339-feature black box, using only features I can explain.**
 
@@ -40,7 +40,7 @@ works on DuckDB; the BigQuery target is one auth step away (see [`dbt/BIGQUERY.m
 
 ## Phases
 - **Phase 1 — core (closes the dbt + cloud-BI skill gap):**
-  transactions → **dbt** marts (`staging` → `intermediate` → user-level `marts`) → **RFM segmentation** (dbt) with a KMeans alternative (Python) → **user-tagging system** (value / lifecycle / risk, in dbt) → **explainable fraud model** (time-validated, Python) + a **black-box comparison** → **Metabase + Looker Studio** dashboards. Design rationale: **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**.
+  transactions → **dbt** marts (`staging` → `intermediate` → user-level `marts`) → **RFM segmentation** (dbt) with a KMeans alternative (Python) → **user-tagging system** (value / lifecycle / risk, in dbt) → **explainable fraud model** (time-validated, Python) + a **black-box comparison** → a **Looker Studio** dashboard on BigQuery. Design rationale: **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**.
 - **Phase 2 — differentiators:**
   **bonus/promo-abuse ring detection** (multi-account / graph community detection) + **cohort, retention & a mock A/B test**.
 
@@ -69,9 +69,8 @@ python src/make_charts.py           # PNG dashboard tiles -> docs/charts/
 # 6. Cloud warehouse (free BigQuery sandbox) — see dbt/BIGQUERY.md for the one-time auth, then:
 #   python src/load_bigquery.py && cd dbt && BQ_PROJECT=<id> DBT_PROFILES_DIR=. dbt build --target bigquery
 
-# 7. BI dashboards — Looker Studio on BigQuery (free, permanent): dashboards/looker_studio_setup.md
-#    Metabase (Docker / local jar / Cloud trial): dashboards/metabase_setup.md
-#    Or export marts for CSV upload: python src/export_marts.py
+# 7. BI dashboard — Looker Studio on BigQuery (free, permanent): dashboards/looker_studio_setup.md
+#    (Metabase is an optional alternative, not part of the claimed stack: dashboards/metabase_setup.md)
 ```
 
 ## Structure
@@ -90,16 +89,13 @@ docs/        eda.md, approach_and_decisions.md, results.md, jd_mapping.md, learn
 **IEEE-CIS Fraud Detection** (Kaggle competition) — real `isFraud` labels + card/device/email identity features. Two source tables (`raw.transactions`, `raw.identity`) loaded by `src/load_ieee.py`; dbt joins and aggregates to a `client_id` (card1 + addr1 proxy — IEEE-CIS has no explicit user id). See `data/README.md`.
 
 ## Results
-**Run on real IEEE-CIS data** (2026-06-26): 590,540 txns → layered, tested dbt marts → RFM segmentation + a user-tagging system + an **explainable, time-validated fraud model**. Headline: the explainable model (only *documented* features + engineered customer-id/baseline) scores **PR-AUC 0.54 / ROC-AUC 0.913**; adding all 339 anonymised columns adds **nothing** (black-box ROC-AUC 0.913 — essentially identical, explainable marginally ahead) — so explainability is not a compromise here, it is the better model. Within ~0.01 ROC-AUC of the domain expert's published 0.9245, using only documented features. Full reasoning in **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**; numbers + charts in **[`docs/results.md`](docs/results.md)**. The **durable** dashboard artifacts are this repo + the PNG charts in `docs/charts/`; live dashboards (Metabase, Looker Studio) build from the dbt marts.
+**Run on real IEEE-CIS data** (2026-06-26): 590,540 txns → layered, tested dbt marts → RFM segmentation + a user-tagging system + an **explainable, time-validated fraud model**. Headline: the explainable model (only *documented* features + engineered customer-id/baseline) scores **PR-AUC 0.54 / ROC-AUC 0.913**; adding all 339 anonymised columns adds **nothing** (black-box ROC-AUC 0.913 — essentially identical, explainable marginally ahead) — so explainability is not a compromise here, it is the better model. Within ~0.01 ROC-AUC of the domain expert's published 0.9245, using only documented features. Full reasoning in **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**; numbers + charts in **[`docs/results.md`](docs/results.md)**. The **durable** dashboard artifacts are this repo + the PNG charts in `docs/charts/`; the live dashboard (Looker Studio on BigQuery) builds from the dbt marts.
 
 ## Status
 - **dbt**: layered project (staging → intermediate → marts), tested + documented, with an exposure. `dbt build` + `dbt docs generate` pass clean on **DuckDB**; BigQuery target is one auth step away (`dbt/BIGQUERY.md`).
 - **BigQuery**: profile + loader + docs ready; runs against the free sandbox after a one-time `gcloud auth application-default login`.
-- **Dashboards**: build specs ready for Looker Studio (free, permanent) and Metabase; durable PNG tiles committed in `docs/charts/`.
+- **Dashboard**: Looker Studio on BigQuery (free, permanent) — build spec ready in `dashboards/looker_studio_setup.md`, builds once the BigQuery run is done; durable PNG tiles committed in `docs/charts/`. (Metabase was dropped: only a billable plan was available, and BigQuery + Looker Studio cover the cloud-BI claim for free.)
 - Next: Phase 2 ring detection, a productionised alert threshold, cohort/A-B analysis.
 
-> **Metabase teardown reminder (cost guardrail).** Metabase Cloud bills after its trial; the
-> free routes (local Docker / local jar) do not. If you use Metabase Cloud, capture the
-> screenshots + exported dashboard definition into `docs/charts/` and `dashboards/exports/`
-> FIRST, then tear it down before the trial ends. **Set the teardown date when you start the
-> trial (trial start + 14 days) and record it here.** No payment details, ever.
+> **Cost guardrail.** BigQuery free sandbox only (never enable billing); Looker Studio is
+> free; no cards anywhere. With Metabase dropped there is no trial to tear down.

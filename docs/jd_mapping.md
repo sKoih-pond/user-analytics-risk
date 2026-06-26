@@ -11,7 +11,7 @@ How this project demonstrates each requirement. **Capability shown by a built ar
 | **Identify patterns, anomalies** in user behaviour | `src/model_explainable.py` (explainable gradient-boosted classifier, time-validated) → `marts.txn_risk` / `user_risk` |
 | **Risk control / anti-fraud** | the whole risk track; promo/withdrawal-ratio signals; PR-AUC eval |
 | Monitor / evaluate **tag effectiveness** | precision of risk tags vs `is_abuser`; dashboard tiles |
-| Python, SQL, **Power BI / Tableau**-class BI | Python + SQL + dbt + **Metabase** dashboard |
+| Python, SQL, **Power BI / Tableau**-class BI | Python + SQL + dbt + **Looker Studio** dashboard on BigQuery |
 | ML applied to user data (advantage) | classifier + Isolation Forest |
 | **Bonus / promo abuse, fraudulent studio groups** (preferred) | `src/abuse_rings.py` (Phase 2: shared-device/IP graph → ring detection) |
 | **A/B testing, user lifecycle** (preferred) | Phase 2: cohort/retention + mock experiment |

@@ -5,8 +5,8 @@ exposures:
     label: "Risk & Segmentation Dashboard"
     type: dashboard
     maturity: medium
-    # Permanent free version is Looker Studio on BigQuery; a Metabase version was also built
-    # (ephemeral trial, captured as PNGs in docs/charts/). Link added once the board is live.
+    # Looker Studio on BigQuery (free, permanent). Durable PNG tiles live in docs/charts/.
+    # Link added once the board is live (after the BigQuery run; see dbt/BIGQUERY.md).
     url: https://lookerstudio.google.com/
     description: >
       Risk and segmentation dashboard for the User Analytics & Risk Platform: segment

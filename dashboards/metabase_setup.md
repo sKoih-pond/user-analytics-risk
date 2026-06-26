@@ -1,12 +1,11 @@
-# Metabase dashboard
+# Metabase dashboard (optional — not part of the claimed stack)
 
-Metabase is the desired BI claim, but it is treated as **disposable**: Metabase Cloud
-bills after its trial. So capture the **durable artifacts first** (PNG screenshots +
-the exported dashboard definition), then it is safe to tear down. The permanent, free,
-always-live dashboard is **Looker Studio on BigQuery** (see `looker_studio_setup.md`).
-
-> COST GUARDRAIL: do not enter payment details. Capture exports before the trial ends, then
-> tear down. Record the teardown deadline (see the README teardown reminder).
+> NOTE: The project's BI claim is **Looker Studio on BigQuery** (free, permanent — see
+> `looker_studio_setup.md`). Metabase was dropped because only a billable plan was available.
+> This file is kept as an optional alternative for anyone who wants a local Metabase via Docker
+> or the OSS jar (both free). If you ever use Metabase **Cloud** (billable), capture the
+> durable artifacts (PNG screenshots + the exported dashboard definition) BEFORE the trial
+> ends, then tear it down. Do not enter payment details.
 
 ## Stand it up (pick one — all free to build)
 
