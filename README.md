@@ -43,12 +43,12 @@ python src/model_blackbox.py        # black-box comparison (quantifies the trade
 
 ## Structure
 ```
-src/         load_ieee.py, explore_features.py, segmentation.py, tagging.py, model_explainable.py, model_blackbox.py, abuse_rings.py(P2), make_charts.py, db.py
+src/         load_ieee.py, explore_features.py, eda_columns.py, segmentation.py, tagging.py, model_explainable.py, model_blackbox.py, abuse_rings.py(P2), make_charts.py, db.py
 dbt/         dbt_project.yml, profiles.yml, models/{staging/stg_transactions, marts/user_features}, schema.yml
 data/        raw/ (gitignored — IEEE-CIS CSVs) + README (dataset + download)
 notebooks/   exploratory Jupyter work
 dashboards/  metabase_setup.md (connection + dashboard spec)
-docs/        approach_and_decisions.md, results.md, jd_mapping.md, learning_path.md, charts/
+docs/        eda.md, approach_and_decisions.md, results.md, jd_mapping.md, learning_path.md, charts/
 ```
 
 ## Data
