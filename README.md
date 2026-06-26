@@ -4,6 +4,22 @@ End-to-end analytics project on a real payments/e-commerce transaction base (**I
 
 Stack: **DuckDB** (file-based warehouse, no server) · **dbt** (transformations) · **Python** (pandas, scikit-learn) · **Metabase** (BI — optional, needs Docker/Java).
 
+**Result: an explainable, time-validated fraud model — ROC-AUC 0.913 / PR-AUC 0.540 — matching a 339-feature black box, using only features I can explain.**
+
+## At a glance
+<table>
+<tr>
+<td width="50%"><img src="docs/charts/model_comparison.png" width="100%"><br><sub><b>Explainable model matches the 339-column black box</b> (PR-AUC, time-split).</sub></td>
+<td width="50%"><img src="docs/charts/tag_effectiveness.png" width="100%"><br><sub><b>Tag effectiveness:</b> fraud concentrates in label-derived tags, not naive heuristics.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/charts/v_block_corr.png" width="100%"><br><sub><b>EDA:</b> the 339 anonymised V-columns are highly redundant (why the black box adds nothing).</sub></td>
+<td width="50%"><img src="docs/charts/d_drift.png" width="100%"><br><sub><b>Drift:</b> time-deltas grow over time, so they are normalised per period.</sub></td>
+</tr>
+</table>
+
+Write-ups: **[results](docs/results.md)** · **[approach & decisions](docs/approach_and_decisions.md)** (the interview script) · **[EDA](docs/eda.md)**.
+
 ## Why this project
 Maps almost line-by-line to the kind of work it showcases — user tagging systems, user profiling, customer segmentation, anomaly/fraud detection, behavioural analysis on large-scale data, in a fintech/internet-platform domain. See [`docs/jd_mapping.md`](docs/jd_mapping.md).
 
