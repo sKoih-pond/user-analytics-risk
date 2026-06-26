@@ -4,11 +4,11 @@ How this project demonstrates each requirement. **Capability shown by a built ar
 
 | JD item | Where it's demonstrated |
 |---|---|
-| Build & maintain a **user tagging system** | `src/tagging.py` → `marts.user_tags` (value / lifecycle / risk families) |
-| Develop **user profiles** from large-scale data | `dbt/.../user_features.sql` (one row per user, behavioural features) |
-| **Data mining, feature engineering, EDA** | `user_features` features + `notebooks/` EDA |
-| **Customer / user segmentation** | `src/segmentation.py` (RFM + KMeans) → `marts.user_segments` |
-| **Identify patterns, anomalies** in user behaviour | `src/anomaly.py` (Isolation Forest + supervised classifier) → `marts.user_risk` |
+| Build & maintain a **user tagging system** | dbt `marts/user_tags.sql` (value / lifecycle / risk families); `src/tagging.py` is the reference impl |
+| Develop **user profiles** from large-scale data | dbt `marts/user_features.sql` (one row per user, behavioural features) |
+| **Data mining, feature engineering, EDA** | `user_features` features + `docs/eda.md` |
+| **Customer / user segmentation** | dbt `marts/user_segments.sql` (RFM) + `src/segmentation.py` (KMeans alternative) |
+| **Identify patterns, anomalies** in user behaviour | `src/model_explainable.py` (explainable gradient-boosted classifier, time-validated) → `marts.txn_risk` / `user_risk` |
 | **Risk control / anti-fraud** | the whole risk track; promo/withdrawal-ratio signals; PR-AUC eval |
 | Monitor / evaluate **tag effectiveness** | precision of risk tags vs `is_abuser`; dashboard tiles |
 | Python, SQL, **Power BI / Tableau**-class BI | Python + SQL + dbt + **Metabase** dashboard |

@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: int_transactions_enriched
+    description: >
+      Per-transaction spine: stg_transactions left-joined to stg_identity. Adds the
+      has_identity flag and the device / browser attributes. All marts aggregate from here.
+    columns:
+      - name: transaction_id
+        description: "Primary key of a transaction."
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('stg_transactions')
+              field: transaction_id
+      - name: client_id
+        description: "User proxy (card1 + addr1)."
+        tests: [not_null]
+      - name: has_identity
+        description: "True when the transaction carried device / identity attributes."

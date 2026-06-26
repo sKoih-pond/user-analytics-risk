@@ -1,0 +1,6 @@
+# Optional: BigQuery warehouse target (free sandbox). Install on top of requirements.txt.
+#   pip install -r requirements-bigquery.txt
+dbt-bigquery>=1.7
+google-cloud-bigquery>=3.0
+pyarrow>=14.0
+db-dtypes>=1.0

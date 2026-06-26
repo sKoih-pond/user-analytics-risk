@@ -3,6 +3,22 @@ version: 2
 sources:
   - name: raw
     schema: raw
-    description: "IEEE-CIS Fraud transactions (train_transaction joined to train_identity), loaded by src/load_ieee.py."
+    description: >
+      IEEE-CIS Fraud Detection (Kaggle competition `ieee-fraud-detection`, Vesta).
+      The two original Kaggle files, loaded by `src/load_ieee.py`. Real `isFraud`
+      labels plus card / email / device features.
     tables:
       - name: transactions
+        description: "train_transaction.csv — one row per transaction (the analytics grain)."
+        columns:
+          - name: TransactionID
+            description: "Primary key of a transaction."
+            tests: [unique, not_null]
+      - name: identity
+        description: >
+          train_identity.csv — device / network / identity attributes for the subset of
+          transactions that carry them. Joined to transactions on TransactionID.
+        columns:
+          - name: TransactionID
+            description: "Foreign key to raw.transactions."
+            tests: [unique, not_null]

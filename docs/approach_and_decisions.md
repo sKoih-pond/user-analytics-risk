@@ -47,6 +47,12 @@ So the simpler key (plus timeline-chaining) gives **32% fewer, ~50% longer, stil
 ## Decision 5 — Test my own signals honestly
 My rule-of-thumb risk tags (`multi_identity`, `high_velocity`) sit **at or below** the 3.5% base fraud rate — i.e. they **don't** concentrate fraud. I kept that finding *in* (see `docs/results.md`) rather than hide it: simple rules look plausible but don't earn trust, so the learned model has to.
 
+## Decision 6 — A layered dbt project, and SQL vs Python for each job
+I split the work by what each tool is good at. The deterministic, rule-based transforms live in **dbt** as a layered project: two raw sources (transaction and identity) into typed **staging**, a single enriched **intermediate** transaction spine, then the **marts** (per-client features, RFM segmentation, the tagging system, and a client-360 risk profile). The ML lives in Python, where it belongs.
+- *Why layered:* each step is small, named and testable. The tests are the point. Not just `not_null`/`unique` on keys, but **relationships** between layers, **accepted_values** on every tag and segment, and two singular tests that encode business rules (a fraud rate must sit in [0,1]; every client gets exactly one value tag and one lifecycle tag). If a CASE branch ever drifts, a test fails rather than a dashboard quietly lying.
+- *Segmentation in SQL, not Python:* I made the dashboard segmentation **RFM in dbt** because it is deterministic, documented and re-runs identically on any warehouse. KMeans stays as a Python alternative (`user_segments_kmeans`) because it earns its place: it surfaces a tiny ultra-whale cohort that the broad RFM bands dilute. Right tool per job, not one tool for everything.
+- *Portable on purpose:* the same models run on **DuckDB** (free local iteration) and **BigQuery** (free sandbox) by using dbt's cross-database macros and NTILE-based thresholds instead of warehouse-specific functions. One project, two warehouses, no forked SQL.
+
 ## What actually drives the model (so I can defend any flag)
 Top signals by permutation importance: **association counts (C1, C14, C9, C13)**, **card rarity** (`card2_fq`, `card1_fq`), **email domain**, **card type**. All interpretable — a flag reads as e.g. *"this card is linked to an unusually high number of addresses, with a risky email domain and an odd billing distance."*
 

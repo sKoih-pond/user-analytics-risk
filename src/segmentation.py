@@ -1,8 +1,11 @@
 """
-Customer segmentation on the dbt user_features mart.
-RFM scoring + KMeans clusters -> writes dbt_marts.user_segments.
+KMeans segmentation alternative on the dbt user_features mart -> writes
+dbt_marts.user_segments_kmeans.
 
-Run after `dbt build`. TODO: tune k (elbow/silhouette), name clusters from centroids.
+The canonical, dashboard-facing segmentation is the deterministic RFM model in
+dbt (models/marts/user_segments.sql). This script is the ML alternative: it adds RFM
+scores then clusters on standardised behavioural features with KMeans, which surfaces a
+tiny ultra-whale micro-cohort that broad RFM bands dilute. Run after `dbt build`.
 """
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
@@ -31,10 +34,10 @@ def main():
     df["segment"] = KMeans(n_clusters=K, random_state=42, n_init=10).fit_predict(X)
 
     out = df[["client_id", "R", "F", "M", "rfm_score", "segment"]]
-    write_table(con, out, "dbt_marts", "user_segments")
+    write_table(con, out, "dbt_marts", "user_segments_kmeans")
     con.close()
     print(out["segment"].value_counts().sort_index())
-    print("wrote dbt_marts.user_segments")
+    print("wrote dbt_marts.user_segments_kmeans (RFM segmentation is dbt-owned: user_segments)")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,14 @@
-# DuckDB warehouse (file-based). Run dbt from the dbt/ dir with:
+# Two warehouses, one dbt project.
+#
+# DuckDB (default, free, local) — fast iteration. Run from the dbt/ dir:
 #   DBT_PROFILES_DIR=.  dbt build
-# Path is relative to the dbt/ dir -> <project_root>/platform.duckdb (same file the
-# Python scripts use via src/db.py). schema 'dbt' -> models land in dbt_staging / dbt_marts.
+# Path is relative to the dbt/ dir -> <project_root>/platform.duckdb (same file the Python
+# scripts use via src/db.py). Base schema 'dbt' -> models land in dbt_staging / dbt_marts.
+#
+# BigQuery (free sandbox, permanent) — the durable cloud-warehouse claim. One-time setup by
+# Sylvester (see dbt/BIGQUERY.md): create the free sandbox, `gcloud auth application-default
+# login`, set BQ_PROJECT, then load raw with src/load_bigquery.py. Then:
+#   DBT_PROFILES_DIR=.  BQ_PROJECT=<your-sandbox-project>  dbt build --target bigquery
 user_analytics_risk:
   target: dev
   outputs:
@@ -10,3 +17,13 @@ user_analytics_risk:
       path: ../platform.duckdb
       schema: dbt
       threads: 4
+    bigquery:
+      type: bigquery
+      method: oauth                                  # uses gcloud application-default creds
+      project: "{{ env_var('BQ_PROJECT', 'set-BQ_PROJECT') }}"
+      dataset: dbt                                   # custom schemas -> dbt_staging / dbt_marts
+      location: "{{ env_var('BQ_LOCATION', 'US') }}"
+      threads: 4
+      priority: interactive
+      job_execution_timeout_seconds: 600
+      job_retries: 1

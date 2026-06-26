@@ -1,53 +1,83 @@
 # Metabase dashboard
 
-Warehouse is **local DuckDB** (`platform.duckdb`). **Metabase Cloud cannot reach a local file**, so use one of these to get the data in:
+Metabase is the desired BI claim, but it is treated as **disposable**: Metabase Cloud
+bills after its trial. So capture the **durable artifacts first** (PNG screenshots +
+the exported dashboard definition), then it is safe to tear down. The permanent, free,
+always-live dashboard is **Looker Studio on BigQuery** (see `looker_studio_setup.md`).
 
-## Path A — Upload the CSVs (simplest)
-Exports are in `dashboards/exports/`: `client_360.csv` (features + segment + risk), `user_tags.csv`.
-1. Metabase → gear ⚙ → **Admin settings → Settings → Uploads** → enable uploads (pick the upload database Metabase offers/your attached DB).
-2. Home → **+ New → CSV upload** (or the Uploads page) → upload `client_360.csv` then `user_tags.csv`. Each becomes a table.
-3. Build the dashboard (below).
+> COST GUARDRAIL: do not enter payment details. Capture exports before the trial ends, then
+> tear down. Record the teardown deadline (see the README teardown reminder).
 
-## Path B — Hosted Postgres (live connection, most robust)
-1. Create a free Postgres (e.g. neon.tech — instant, gives a connection string).
-2. Load the marts into it (an agent can do this from the local DuckDB given the connection string).
-3. Metabase → **Add database → PostgreSQL** → paste host/db/user/password → live dashboards on `client_360` + `user_tags`.
+## Stand it up (pick one — all free to build)
+
+**A. Local Docker (free, no billing, recommended if Docker is available).**
+`docker compose up -d` (see `docker-compose.yml`) starts Postgres + Metabase on
+<http://localhost:3000>. Load the marts into the Postgres (`platform` db) — e.g. export the
+marts with `python src/export_marts.py` and copy the CSVs in, or point dbt at the Postgres.
+
+**B. Local Metabase jar (free, no Docker).** Needs Java 21
+(`brew install openjdk@21`). Download `metabase.jar` from <https://www.metabase.com/start/oss/>,
+run `java -jar metabase.jar`, open <http://localhost:3000>. Connect via the community DuckDB
+driver (drop the driver jar in `plugins/`) to read `platform.duckdb` directly, or upload the
+CSVs from `src/export_marts.py`.
+
+**C. Metabase Cloud trial (billable after the trial).** Sign up, then use the CSV-upload
+path below (Cloud cannot reach a local file). Capture artifacts before the trial ends.
+
+## Get the data in (Cloud / CSV path)
+`python src/export_marts.py` writes `dashboards/exports/`: `client_360.csv`
+(= `user_risk_profile`: features + segment + tags + risk flags), `user_tags.csv`,
+`user_segments.csv`.
+1. Metabase → ⚙ Admin → Settings → **Uploads** → enable.
+2. **+ New → CSV upload** → upload `client_360.csv`, `user_tags.csv`, `user_segments.csv`.
 
 ## Dashboard — ready-to-paste SQL (Native questions)
-Make each one a **+ New → SQL query** on the uploads database, then pick the viz. Table names match the uploaded files (`client_360`, `user_tags`) — confirm exact names in Metabase's data browser and adjust if it prefixed them.
+Table names match the uploaded files (`client_360`, `user_tags`); confirm exact names in the
+data browser and adjust if Metabase prefixed them.
 
-**1. Segments overview** (bar / table)
+**1. Segment overview** (table)
 ```sql
 SELECT segment, count(*) AS clients, round(avg(monetary),2) AS avg_spend,
        round(avg(frequency),1) AS avg_txns, round(avg(fraud_rate),4) AS fraud_rate
-FROM client_360 GROUP BY segment ORDER BY segment;
+FROM client_360 GROUP BY segment ORDER BY fraud_rate DESC;
 ```
-**2. Risk-tag distribution** (bar)
-```sql
-SELECT tag, count(*) AS clients FROM user_tags
-WHERE tag_family='risk' GROUP BY tag ORDER BY clients DESC;
-```
-**3. Value & lifecycle mix** (bar, stacked by family)
+**2. Value / lifecycle / risk tag mix** (bar, stacked by family)
 ```sql
 SELECT tag_family, tag, count(*) AS clients FROM user_tags
-WHERE tag_family IN ('value','lifecycle') GROUP BY 1,2 ORDER BY 1,3 DESC;
+GROUP BY 1,2 ORDER BY 1,3 DESC;
 ```
-**4. Tag effectiveness — do risk tags concentrate fraud?** (bar; compare to base rate)
+**3. Tag effectiveness — do risk tags concentrate fraud?** (bar vs base rate)
 ```sql
 SELECT t.tag, count(*) AS clients, round(avg(c.fraud_rate),4) AS avg_fraud_rate
 FROM user_tags t JOIN client_360 c USING(client_id)
 WHERE t.tag_family='risk' GROUP BY t.tag ORDER BY avg_fraud_rate DESC;
--- overall base rate for comparison:
--- SELECT round(avg(fraud_rate),4) FROM client_360;
+-- base rate to compare against: SELECT round(avg(fraud_rate),4) FROM client_360;  (~0.0316)
 ```
-**5. Model risk — flagged clients + top risks** (number + table)
+**4. Fraud rate by segment** (bar)
 ```sql
-SELECT any_flagged, count(*) AS clients FROM client_360 GROUP BY any_flagged;
--- top-risk clients:
--- SELECT client_id, round(max_proba,3) max_proba, fraud_rate, n_txn, monetary
--- FROM client_360 ORDER BY max_proba DESC LIMIT 50;
+SELECT segment, round(avg(fraud_rate),4) AS avg_fraud_rate
+FROM client_360 GROUP BY segment ORDER BY avg_fraud_rate DESC;
 ```
-Add all five to one dashboard → screenshot into `docs/` for the portfolio writeup.
+**5. Risk flags** (scorecards)
+```sql
+SELECT sum(is_confirmed_fraud) AS confirmed_fraud, sum(is_multi_identity) AS multi_identity,
+       sum(is_high_velocity) AS high_velocity, count(*) AS clients FROM client_360;
+```
+Add all five to one dashboard.
 
-## If you want the agent to build it for you
-Metabase Cloud is internet-reachable, so with a **Metabase API key** (Admin → Settings → Authentication → API keys) the agent can create these questions + the dashboard via the REST API. Optional — the SQL above is enough to do it by hand.
+## Capture durable artifacts BEFORE teardown (these ARE the portfolio evidence)
+1. **Screenshots** of each card + the full board → `docs/charts/` and `dashboards/exports/`.
+2. **Export the dashboard definition** so it survives teardown:
+   - OSS serialization: `java -jar metabase.jar export dashboards/exports/metabase` (or the
+     Admin → Settings serialization), commit the YAML.
+   - Or via the API: `GET /api/dashboard/:id` → save the JSON to
+     `dashboards/exports/metabase_dashboard.json` and commit it.
+3. Only then tear down (`docker compose down -v`, or stop the jar / cancel the Cloud trial).
+
+> The matplotlib PNGs in `docs/charts/` (from `src/make_charts.py`) already mirror these
+> tiles and are committed, so the visual evidence exists regardless of any live instance.
+
+## Agent-built option
+Metabase's REST API can create these questions + the dashboard. With a running instance and
+an API key (Admin → Settings → Authentication → API keys), an agent can build it, screenshot
+it (browser MCP), and export the JSON in one pass.

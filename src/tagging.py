@@ -1,6 +1,11 @@
 """
-User-tagging system on the client-level user_features mart ->
-writes dbt_marts.user_tags (client_id, tag_family, tag). One client -> many tags.
+User-tagging system — reference Python implementation.
+
+The canonical tagging is now the dbt model (models/marts/user_tags.sql), which the
+dashboard and tests use. This script is kept as the readable reference for the same rules
+and writes dbt_marts.user_tags_python so it never overwrites the dbt-owned table. The dbt
+version uses NTILE(100) percentile ranks for portability; this one uses exact quantiles —
+the tag distributions differ slightly but the families and qualitative findings match.
 
   value:     vip / high / mid / low        (monetary + frequency)
   lifecycle: active / dormant / one_off / new   (recency + tenure)
@@ -56,10 +61,10 @@ def main():
             rows.append((r.client_id, "risk", t))
 
     out = pd.DataFrame(rows, columns=["client_id", "tag_family", "tag"])
-    write_table(con, out, "dbt_marts", "user_tags")
+    write_table(con, out, "dbt_marts", "user_tags_python")
     con.close()
     print(out.groupby(["tag_family", "tag"]).size())
-    print("wrote dbt_marts.user_tags")
+    print("wrote dbt_marts.user_tags_python (canonical tagging is dbt-owned: user_tags)")
 
 
 if __name__ == "__main__":

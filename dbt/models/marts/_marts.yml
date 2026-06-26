@@ -1,0 +1,124 @@
+version: 2
+
+models:
+  - name: user_features
+    description: >
+      One row per client (card1+addr1 proxy) with behavioural and risk features:
+      RFM building blocks, product / device / email diversity, tenure, recency and the
+      client's fraud rate. The spine for segmentation, tagging and the risk profile.
+    columns:
+      - name: client_id
+        description: "User proxy (card1 + addr1). IEEE-CIS has no explicit user id."
+        tests: [unique, not_null]
+      - name: n_txn
+        description: "Transaction count for the client."
+        tests: [not_null]
+      - name: frequency
+        description: "RFM frequency = transaction count."
+        tests: [not_null]
+      - name: monetary
+        description: "RFM monetary = total amount transacted."
+        tests: [not_null]
+      - name: fraud_rate
+        description: "Share of the client's transactions labelled fraud (0-1)."
+        tests: [not_null]
+      - name: pct_identity
+        description: "Share of the client's transactions that carried device / identity data."
+
+  - name: user_segments
+    description: >
+      RFM segmentation: each client scored 1-5 on Recency, Frequency and Monetary (NTILE
+      quintiles) and banded into a named segment from the combined RFM score.
+    columns:
+      - name: client_id
+        description: "User proxy; one row per client."
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('user_features')
+              field: client_id
+      - name: r
+        description: "Recency quintile (5 = most recent)."
+        tests: [not_null]
+      - name: f
+        description: "Frequency quintile (5 = most frequent)."
+        tests: [not_null]
+      - name: m
+        description: "Monetary quintile (5 = highest spend)."
+        tests: [not_null]
+      - name: rfm_score
+        description: "R + F + M (3-15)."
+        tests: [not_null]
+      - name: segment
+        description: "Named RFM segment."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [Champions, Loyal, Potential, "At Risk", Hibernating]
+
+  - name: user_tags
+    description: >
+      User-tagging system in long format (client_id, tag_family, tag). One client maps to
+      many tags: exactly one value tag, one lifecycle tag, and one or more risk tags.
+    columns:
+      - name: client_id
+        description: "User proxy."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('user_features')
+              field: client_id
+      - name: tag_family
+        description: "Tag family: value, lifecycle or risk."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [value, lifecycle, risk]
+      - name: tag
+        description: "The tag within its family."
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                [vip, high, mid, low,
+                 active, dormant, new, one_off,
+                 confirmed_fraud, multi_identity, high_velocity, clean]
+
+  - name: user_risk_profile
+    description: >
+      Client-360 risk mart: behavioural features + RFM segment + tagging signals (value /
+      lifecycle tags and pivoted risk flags) in one row per client. The view the BI
+      dashboard reads and the target of the `risk_dashboard` exposure.
+    columns:
+      - name: client_id
+        description: "User proxy; one row per client."
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('user_features')
+              field: client_id
+      - name: segment
+        description: "RFM segment (from user_segments)."
+        tests:
+          - accepted_values:
+              values: [Champions, Loyal, Potential, "At Risk", Hibernating]
+      - name: value_tag
+        description: "Value tag (from user_tags)."
+        tests:
+          - accepted_values:
+              values: [vip, high, mid, low]
+      - name: lifecycle_tag
+        description: "Lifecycle tag (from user_tags)."
+        tests:
+          - accepted_values:
+              values: [active, dormant, new, one_off]
+      - name: is_confirmed_fraud
+        description: "1 if the client carries the confirmed_fraud risk tag."
+        tests:
+          - accepted_values:
+              values: [0, 1]
+      - name: fraud_rate
+        description: "Share of the client's transactions labelled fraud (0-1)."
+        tests: [not_null]

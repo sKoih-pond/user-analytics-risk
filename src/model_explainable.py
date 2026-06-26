@@ -45,7 +45,7 @@ SELECT = """
            c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,
            d1,d2,d3,d4,d5,d6,d7,d8,d9,d10,d11,d12,d13,d14,d15,
            m1,m2,m3,m4,m5,m6,m7,m8,m9
-    FROM raw.transactions
+    FROM raw.transactions_identity
 """
 
 

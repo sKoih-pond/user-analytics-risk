@@ -16,7 +16,7 @@ from model_explainable import prepare, build_X, NUMERIC, CATEGORICAL
 def main():
     con = get_con()
     df, _ = prepare(con)
-    V = con.execute("SELECT transactionid tid, COLUMNS('^V[0-9]+$') FROM raw.transactions").df()
+    V = con.execute("SELECT transactionid tid, COLUMNS('^V[0-9]+$') FROM raw.transactions_identity").df()
     V.columns = ["tid"] + [c.lower() for c in V.columns[1:]]
     df = df.merge(V, on="tid", how="left")
     con.close()

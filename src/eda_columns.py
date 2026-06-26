@@ -1,7 +1,7 @@
 """
 Structural EDA — the evidence behind the modelling choices.
 Adapted from two IEEE-CIS references: alijs1 (per-column reference) and
-cdeotte (NaN-grouping of the V/ID columns). Reproducible; reads raw.transactions;
+cdeotte (NaN-grouping of the V/ID columns). Reproducible; reads raw.transactions_identity;
 saves charts to docs/charts/. Findings written up in docs/eda.md.
 """
 import os
@@ -16,7 +16,7 @@ from db import get_con
 OUT = "docs/charts"
 os.makedirs(OUT, exist_ok=True)
 con = get_con()
-df = con.execute("select * from raw.transactions").df()
+df = con.execute("select * from raw.transactions_identity").df()
 df.columns = df.columns.str.lower()
 N = len(df)
 print(f"rows={N:,}  columns={df.shape[1]}")

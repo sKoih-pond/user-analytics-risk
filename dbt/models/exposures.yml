@@ -1,0 +1,22 @@
+version: 2
+
+exposures:
+  - name: risk_dashboard
+    label: "Risk & Segmentation Dashboard"
+    type: dashboard
+    maturity: medium
+    # Permanent free version is Looker Studio on BigQuery; a Metabase version was also built
+    # (ephemeral trial, captured as PNGs in docs/charts/). Link added once the board is live.
+    url: https://lookerstudio.google.com/
+    description: >
+      Risk and segmentation dashboard for the User Analytics & Risk Platform: segment
+      overview, value / lifecycle / risk tag mix, tag effectiveness (fraud rate by tag vs
+      base rate) and fraud rate by segment. Built on the marts below.
+    depends_on:
+      - ref('user_risk_profile')
+      - ref('user_segments')
+      - ref('user_tags')
+      - ref('user_features')
+    owner:
+      name: Sylvester Koh
+      email: sylvester@kohstack.au

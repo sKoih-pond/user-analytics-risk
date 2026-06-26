@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: stg_transactions
+    description: >
+      Typed transaction grain from IEEE-CIS train_transaction. One row per transaction,
+      with an approximate event timestamp and the card1+addr1 client proxy derived here.
+    columns:
+      - name: transaction_id
+        description: "Primary key of a transaction."
+        tests: [unique, not_null]
+      - name: is_fraud
+        description: "Label: 1 if the transaction was confirmed fraud, else 0."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1]
+      - name: client_id
+        description: "User proxy (card1 + addr1). Approximation — IEEE-CIS has no explicit user id."
+        tests: [not_null]
+      - name: amount
+        description: "Transaction amount."
+        tests: [not_null]
+      - name: event_ts
+        description: "Approximate timestamp (2017-12-01 reference + TransactionDT seconds)."
+
+  - name: stg_identity
+    description: >
+      Typed device / network attributes from IEEE-CIS train_identity, for the subset of
+      transactions that carry them.
+    columns:
+      - name: transaction_id
+        description: "Primary key; foreign key to stg_transactions."
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('stg_transactions')
+              field: transaction_id
+      - name: device_type
+        description: "Device category (desktop / mobile), where present."
+      - name: browser
+        description: "Browser / OS string (id_31), where present."

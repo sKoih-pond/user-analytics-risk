@@ -2,7 +2,7 @@
 
 End-to-end analytics project on a real payments/e-commerce transaction base (**IEEE-CIS Fraud**): **profile users, segment them, tag them, and detect fraud/abuse.** Built to mirror a Data-Analyst (Risk) brief and to demonstrate the modern analyst stack (SQL + **dbt** + Python + **Metabase**).
 
-Stack: **DuckDB** (file-based warehouse, no server) · **dbt** (transformations) · **Python** (pandas, scikit-learn) · **Metabase** (BI — optional, needs Docker/Java).
+Stack: **dbt** (layered, tested, documented transformations) · **DuckDB** (local warehouse) and **BigQuery** (free cloud sandbox) — the same dbt project runs on both · **Python** (pandas, scikit-learn) for the ML · **Metabase** + **Looker Studio** (BI dashboards).
 
 **Result: an explainable, time-validated fraud model — ROC-AUC 0.913 / PR-AUC 0.540 — matching a 339-feature black box, using only features I can explain.**
 
@@ -25,11 +25,24 @@ Maps almost line-by-line to the kind of work it showcases — user tagging syste
 
 > Honesty: this is a **capability demonstration** (a built artifact), not claimed work experience. dbt/Metabase/Postgres go on the CV only once this is genuinely built and running.
 
+## dbt project (the analytics layer)
+A layered, adapter-portable dbt project that runs on **both** DuckDB and BigQuery:
+```
+sources (raw.transactions, raw.identity)
+  -> staging      stg_transactions, stg_identity
+  -> intermediate int_transactions_enriched
+  -> marts        user_features, user_segments (RFM), user_tags, user_risk_profile
+```
+Tested (not_null / unique on keys, relationships across layers, accepted_values on tags and
+segments, 2 singular tests), documented (model + column descriptions), with an **exposure**
+pointing at the dashboard. `DBT_PROFILES_DIR=. dbt build` passes clean and `dbt docs generate`
+works on DuckDB; the BigQuery target is one auth step away (see [`dbt/BIGQUERY.md`](dbt/BIGQUERY.md)).
+
 ## Phases
-- **Phase 1 — core (also closes the dbt + Metabase skill gap):**
-  transactions → dbt models (`staging` → user-level `marts`) → **RFM + KMeans segmentation** → **user-tagging system** (value / lifecycle / risk tags) → **explainable fraud model** (time-validated) + a **black-box comparison** → **Metabase** dashboard. Design rationale: **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**.
+- **Phase 1 — core (closes the dbt + cloud-BI skill gap):**
+  transactions → **dbt** marts (`staging` → `intermediate` → user-level `marts`) → **RFM segmentation** (dbt) with a KMeans alternative (Python) → **user-tagging system** (value / lifecycle / risk, in dbt) → **explainable fraud model** (time-validated, Python) + a **black-box comparison** → **Metabase + Looker Studio** dashboards. Design rationale: **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**.
 - **Phase 2 — differentiators:**
-  **bonus/promo-abuse ring detection** (multi-account / graph community detection) + **cohort, retention & a mock A/B test**. Optionally re-run on **BigQuery** to claim it honestly.
+  **bonus/promo-abuse ring detection** (multi-account / graph community detection) + **cohort, retention & a mock A/B test**.
 
 ## Quickstart
 ```bash
@@ -37,41 +50,56 @@ Maps almost line-by-line to the kind of work it showcases — user tagging syste
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 2. No server needed — DuckDB is a local file (platform.duckdb). Metabase is optional/later.
+# 2. No server needed — DuckDB is a local file (platform.duckdb).
 
 # 3. Get the data: accept IEEE-CIS rules on Kaggle first, then download + load
 export KAGGLE_API_TOKEN=$(cat ~/.kaggle/access_token)
 python -c "import kagglehub,glob,shutil; p=kagglehub.competition_download('ieee-fraud-detection'); [shutil.copy(f,'data/raw/') for f in glob.glob(p+'/train_*.csv')]"
-python src/load_ieee.py                    # train_transaction(+identity) -> raw.transactions
+python src/load_ieee.py                    # -> raw.transactions, raw.identity (+ joined view)
 
-# 4. Transform with dbt
-cd dbt && DBT_PROFILES_DIR=. dbt build && cd ..   # staging + marts, runs tests
+# 4. Transform with dbt (staging -> intermediate -> marts, runs all tests)
+cd dbt && DBT_PROFILES_DIR=. dbt build && DBT_PROFILES_DIR=. dbt docs generate && cd ..
 
-# 5. Analytics (Python)
-python src/segmentation.py                 # RFM + KMeans -> user_segments
-python src/tagging.py                      # value/lifecycle/risk tags -> user_tags
+# 5. ML + charts (Python)
 python src/model_explainable.py     # explainable model (time-split) -> txn_risk + user_risk
 python src/model_blackbox.py        # black-box comparison (quantifies the trade-off)
+python src/segmentation.py          # KMeans alternative -> user_segments_kmeans
+python src/make_charts.py           # PNG dashboard tiles -> docs/charts/
 
-# 6. (Optional) BI: Metabase via Docker/Java connected to platform.duckdb (community DuckDB driver),
-#    or Looker Studio on a CSV export. Spec in dashboards/metabase_setup.md. Charts also fine in notebooks/.
+# 6. Cloud warehouse (free BigQuery sandbox) — see dbt/BIGQUERY.md for the one-time auth, then:
+#   python src/load_bigquery.py && cd dbt && BQ_PROJECT=<id> DBT_PROFILES_DIR=. dbt build --target bigquery
+
+# 7. BI dashboards — Looker Studio on BigQuery (free, permanent): dashboards/looker_studio_setup.md
+#    Metabase (Docker / local jar / Cloud trial): dashboards/metabase_setup.md
+#    Or export marts for CSV upload: python src/export_marts.py
 ```
 
 ## Structure
 ```
-src/         load_ieee.py, explore_features.py, eda_columns.py, segmentation.py, tagging.py, model_explainable.py, model_blackbox.py, abuse_rings.py(P2), make_charts.py, db.py
-dbt/         dbt_project.yml, profiles.yml, models/{staging/stg_transactions, marts/user_features}, schema.yml
+src/         load_ieee.py, load_bigquery.py, export_marts.py, segmentation.py(KMeans alt),
+             tagging.py(reference impl), model_explainable.py, model_blackbox.py,
+             explore_features.py, eda_columns.py, abuse_rings.py(P2), make_charts.py, db.py
+dbt/         dbt_project.yml, profiles.yml (duckdb + bigquery), BIGQUERY.md,
+             models/{sources.yml, staging/, intermediate/, marts/, exposures.yml}, tests/
 data/        raw/ (gitignored — IEEE-CIS CSVs) + README (dataset + download)
-notebooks/   exploratory Jupyter work
-dashboards/  metabase_setup.md (connection + dashboard spec)
+dashboards/  metabase_setup.md, looker_studio_setup.md, exports/ (gitignored CSVs)
 docs/        eda.md, approach_and_decisions.md, results.md, jd_mapping.md, learning_path.md, charts/
 ```
 
 ## Data
-**IEEE-CIS Fraud Detection** (Kaggle competition) — real `isFraud` labels + card/device/email identity features. Canonical grain: `raw.transactions`; aggregated to a `client_id` (card1 + addr1 proxy — IEEE-CIS has no explicit user id). See `data/README.md`.
+**IEEE-CIS Fraud Detection** (Kaggle competition) — real `isFraud` labels + card/device/email identity features. Two source tables (`raw.transactions`, `raw.identity`) loaded by `src/load_ieee.py`; dbt joins and aggregates to a `client_id` (card1 + addr1 proxy — IEEE-CIS has no explicit user id). See `data/README.md`.
 
 ## Results
-Phase 1 **run on real IEEE-CIS data** (2026-06-25): 590,540 txns → dbt marts (tested) → segmentation + tagging + an **explainable, time-validated fraud model**. Headline: the explainable model (only *documented* features + engineered customer-id/baseline) scores **PR-AUC 0.540 / ROC-AUC 0.913**; adding all 339 anonymised columns adds **nothing** (black-box 0.538/0.911 — essentially identical, marginally below) — so explainability is not a compromise here, it is the better model. Within ~0.01 ROC-AUC of the domain expert's published 0.9245, using only documented features. Full reasoning in **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**; numbers + charts in **[`docs/results.md`](docs/results.md)**. A Metabase dashboard was built as a demo; the **durable** artifacts are this repo + the PNG charts (the Metabase trial is ephemeral — nothing links to it).
+**Run on real IEEE-CIS data** (2026-06-26): 590,540 txns → layered, tested dbt marts → RFM segmentation + a user-tagging system + an **explainable, time-validated fraud model**. Headline: the explainable model (only *documented* features + engineered customer-id/baseline) scores **PR-AUC 0.54 / ROC-AUC 0.913**; adding all 339 anonymised columns adds **nothing** (black-box ROC-AUC 0.913 — essentially identical, explainable marginally ahead) — so explainability is not a compromise here, it is the better model. Within ~0.01 ROC-AUC of the domain expert's published 0.9245, using only documented features. Full reasoning in **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**; numbers + charts in **[`docs/results.md`](docs/results.md)**. The **durable** dashboard artifacts are this repo + the PNG charts in `docs/charts/`; live dashboards (Metabase, Looker Studio) build from the dbt marts.
 
 ## Status
-Phase 1 done. Next (non-blocking): Phase 2 ring detection, a productionised alert threshold, cohort/A-B analysis. Tracks to Employment Task #7 and the Binance application.
+- **dbt**: layered project (staging → intermediate → marts), tested + documented, with an exposure. `dbt build` + `dbt docs generate` pass clean on **DuckDB**; BigQuery target is one auth step away (`dbt/BIGQUERY.md`).
+- **BigQuery**: profile + loader + docs ready; runs against the free sandbox after a one-time `gcloud auth application-default login`.
+- **Dashboards**: build specs ready for Looker Studio (free, permanent) and Metabase; durable PNG tiles committed in `docs/charts/`.
+- Next: Phase 2 ring detection, a productionised alert threshold, cohort/A-B analysis.
+
+> **Metabase teardown reminder (cost guardrail).** Metabase Cloud bills after its trial; the
+> free routes (local Docker / local jar) do not. If you use Metabase Cloud, capture the
+> screenshots + exported dashboard definition into `docs/charts/` and `dashboards/exports/`
+> FIRST, then tear it down before the trial ends. **Set the teardown date when you start the
+> trial (trial start + 14 days) and record it here.** No payment details, ever.
