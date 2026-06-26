@@ -1,8 +1,14 @@
 # Looker Studio dashboard (free, permanent) on BigQuery
 
+> LIVE: <https://lookerstudio.google.com/reporting/d0032be5-ae94-487d-8046-d5649f64453c>
+> Built on the BigQuery `dbt_marts.user_risk_profile` mart (project `exemplary-city-500610-u7`),
+> shared "unlisted" (anyone with the link can view), owner's credentials. Current tiles:
+> total clients (39,974), segment overview table (avg fraud rate %), fraud rate by segment.
+
 Looker Studio is free and connects straight to BigQuery, so this is the **permanent, live,
 shareable** version of the risk dashboard. It pairs with the BigQuery warehouse and needs
-no billing. Build it once the dbt marts exist on BigQuery (`dbt build --target bigquery`).
+no billing. The steps below reproduce or extend it (the dbt marts must exist on BigQuery via
+`dbt build --target bigquery`).
 
 ## Connect
 1. Go to <https://lookerstudio.google.com> → **Create → Report**.

@@ -5,9 +5,9 @@ exposures:
     label: "Risk & Segmentation Dashboard"
     type: dashboard
     maturity: medium
-    # Looker Studio on BigQuery (free, permanent). Durable PNG tiles live in docs/charts/.
-    # Link added once the board is live (after the BigQuery run; see dbt/BIGQUERY.md).
-    url: https://lookerstudio.google.com/
+    # Live Looker Studio dashboard on the BigQuery marts (free, permanent, unlisted link).
+    # Durable PNG tiles also committed in docs/charts/.
+    url: https://lookerstudio.google.com/reporting/d0032be5-ae94-487d-8046-d5649f64453c
     description: >
       Risk and segmentation dashboard for the User Analytics & Risk Platform: segment
       overview, value / lifecycle / risk tag mix, tag effectiveness (fraud rate by tag vs

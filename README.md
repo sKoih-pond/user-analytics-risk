@@ -18,7 +18,7 @@ Stack: **dbt** (layered, tested, documented transformations) · **DuckDB** (loca
 </tr>
 </table>
 
-Write-ups: **[results](docs/results.md)** · **[approach & decisions](docs/approach_and_decisions.md)** (the interview script) · **[EDA](docs/eda.md)**.
+**[Live dashboard (Looker Studio on BigQuery)](https://lookerstudio.google.com/reporting/d0032be5-ae94-487d-8046-d5649f64453c)** · Write-ups: **[results](docs/results.md)** · **[approach & decisions](docs/approach_and_decisions.md)** (the interview script) · **[EDA](docs/eda.md)**.
 
 ## Why this project
 Maps almost line-by-line to the kind of work it showcases — user tagging systems, user profiling, customer segmentation, anomaly/fraud detection, behavioural analysis on large-scale data, in a fintech/internet-platform domain. See [`docs/jd_mapping.md`](docs/jd_mapping.md).
@@ -95,7 +95,7 @@ docs/        eda.md, approach_and_decisions.md, results.md, jd_mapping.md, learn
 ## Status
 - **dbt**: layered project (staging → intermediate → marts), tested + documented, with an exposure. `dbt build` (PASS=55) + `dbt docs generate` pass clean on **both DuckDB and the BigQuery free sandbox** from one codebase.
 - **BigQuery**: done — ran against the free sandbox (no billing); the marts are populated (39,974 clients). Reproduce via `dbt/BIGQUERY.md`.
-- **Dashboard**: Looker Studio on BigQuery (free, permanent) — build spec ready in `dashboards/looker_studio_setup.md`, builds on the live BigQuery marts; durable PNG tiles committed in `docs/charts/`. (Metabase was dropped: only a billable plan was available, and BigQuery + Looker Studio cover the cloud-BI claim for free.)
+- **Dashboard**: **[live on Looker Studio](https://lookerstudio.google.com/reporting/d0032be5-ae94-487d-8046-d5649f64453c)** (free, permanent), built on the BigQuery `user_risk_profile` mart — total clients, segment overview, and fraud rate by segment; durable PNG tiles also in `docs/charts/`. (Metabase was dropped: only a billable plan was available, and BigQuery + Looker Studio cover the cloud-BI claim for free.)
 - Next: Phase 2 ring detection, a productionised alert threshold, cohort/A-B analysis.
 
 > **Cost guardrail.** BigQuery free sandbox only (never enable billing); Looker Studio is
