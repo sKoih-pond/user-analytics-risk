@@ -5,14 +5,15 @@ This project is a **risk decision-support tool**, so the goal is a model I can *
 > On AI: I used an AI assistant to scaffold and write code faster. The **analytical decisions** — what to include, how to validate, where to set the alarm, what to trust — are mine, and the reasoning is below. That's the difference between *using* a tool and *outsourcing the judgement*.
 
 ## Decision 1 — Explainable features only (no anonymised columns)
-The dataset ships 339 anonymised "V" features (Vesta's secret engineered signals). I **excluded only those** and used **every feature whose meaning is documented**: amount, all **association counts** (C1–C14), all **time-deltas** (D1–D15), **name/address match flags** (M1–M9), distances, card type/network, product code, buyer/recipient email, device/identity signals, hour-of-day — plus engineered explainable features (sharper customer id, cross-account sharing, per-customer baseline).
-- *Why:* if the model flags someone, I have to say **why** — to the customer, a colleague, or a regulator. "Column V257 was high" is not an answer. "This card is linked to an unusual number of addresses, at an odd hour, on a never-seen device" is.
-- *Trade-off, measured:* adding all 339 V-columns on top of this model lifts PR-AUC by only **+0.013** (0.538 vs **0.525**) and ROC-AUC by **0.000** (both 0.901). Explainability is effectively **free** here, so I ship the model I can defend. (See `model_blackbox.py`.)
-- *Interviewer Q: "Why not use all the data?"* → measured the gain; it's 0.013; not worth losing the ability to explain a decision.
+The dataset ships 339 anonymised "V" features (Vesta's secret engineered signals). I **excluded only those** and used **every feature whose meaning is documented**: amount, all **association counts** (C1–C14), all **time-deltas** (D1–D15), **match flags** (M1–M9), distances, card type/network, product code, emails, device/identity, hour — plus explainable engineered features: a validated customer id, **rarity (frequency) encoding** of cards/addresses/emails, **amount-vs-card-group z-scores**, **drift-normalised time-deltas**, calendar/holiday, and behavioural distances.
+- *Why:* if the model flags someone, I have to say **why** — to the customer, a colleague, or a regulator. "Column V257 was high" is not an answer. "This card value is rare, the amount is unusual for this card group, on a never-seen device" is.
+- *Result:* the explainable model reaches **PR-AUC 0.540 / ROC-AUC 0.913** (time-validated) — within ~0.01 ROC-AUC of the domain expert's published 0.9245, using *only documented features*.
+- *Trade-off, measured:* adding all 339 V-columns on top adds **nothing measurable** (black-box 0.538/0.911 vs explainable 0.540/0.913 — marginally *below*). Explainability isn't a compromise here; with the right FE it's the better model. (See `model_blackbox.py`.)
+- *Interviewer Q: "Why not use all the data?"* → measured the gain; it's tiny; not worth losing the ability to explain a decision.
 
 ## Decision 2 — Time-based validation (don't fool yourself)
 Fraud data is time-ordered, so I trained on the **earlier 70%** and tested on the **later 30%** — the model never sees the future.
-- *Why:* a random shuffle lets the model peek at future transactions and **inflates** the result. Every number I quote is forward-in-time — the explainable model: **PR-AUC 0.525 / ROC-AUC 0.901**. That's what you'd actually get in production, not a flattering offline figure.
+- *Why:* a random shuffle lets the model peek at future transactions and **inflates** the result. Every number I quote is forward-in-time — the explainable model: **PR-AUC 0.540 / ROC-AUC 0.913**. That's what you'd actually get in production, not a flattering offline figure.
 - *Interviewer Q: "How do you know it'll hold up live?"* → I validated the way production runs: forward in time.
 
 ## Decision 3 — Set the alarm on cost, not on 0.5
@@ -39,7 +40,7 @@ The V-columns are mostly **aggregations over entities** (card/email/device), so 
 
 \*share of multi-transaction customers that are all-fraud or all-honest — the "did I merge two different people?" check.
 
-So the simpler key (plus timeline-chaining) gives **32% fewer, ~50% longer, still 94%-coherent** customer histories — the correct entity. **But the model didn't improve** (≈0.52 PR-AUC / 0.90 ROC-AUC either way), and the per-customer baseline features still don't rank.
+So the simpler key (plus timeline-chaining) gives **32% fewer, ~50% longer, still 94%-coherent** customer histories — the correct entity. **The id change alone didn't move the model** (~0.52 either way at that point); the later lift to **0.540 / 0.913** came from explainable *feature engineering* (rarity + card-group aggregations), not the id. The per-customer baseline features still don't rank.
 
 - *The real insight:* the baseline/deviation idea catches **account-takeover** — an account behaving unlike itself. This dataset's fraud is mostly **first-transaction card fraud** (a stolen card used once), so there's no personal "normal" to deviate from, however well you reconstruct the customer. The baseline is the **right tool for a repeat-user platform** (an exchange like Binance), and genuinely the wrong lever here. Matching the technique to the fraud type is the judgement — and *"I validated my own grouping and found it over-fragmented, then learned the technique doesn't fit this fraud type"* is a stronger interview answer than a number.
 
@@ -47,9 +48,9 @@ So the simpler key (plus timeline-chaining) gives **32% fewer, ~50% longer, stil
 My rule-of-thumb risk tags (`multi_identity`, `high_velocity`) sit **at or below** the 3.5% base fraud rate — i.e. they **don't** concentrate fraud. I kept that finding *in* (see `docs/results.md`) rather than hide it: simple rules look plausible but don't earn trust, so the learned model has to.
 
 ## What actually drives the model (so I can defend any flag)
-Top signals by permutation importance: **association counts (C1, C14, C13, C9)**, buyer/recipient **email domains**, **distances**, **time-deltas**, **billing region**. All interpretable — a flag reads as e.g. *"this card is linked to an unusually high number of addresses, with a risky email domain and an odd billing distance."*
+Top signals by permutation importance: **association counts (C1, C14, C9, C13)**, **card rarity** (`card2_fq`, `card1_fq`), **email domain**, **card type**. All interpretable — a flag reads as e.g. *"this card is linked to an unusually high number of addresses, with a risky email domain and an odd billing distance."*
 
 ## Limitations (I'd raise these myself)
 - "Customer" is a constructed id (card components + region + account-birthday) — IEEE-CIS has no ground-truth user id, so it's a validated heuristic.
 - Single dataset, one time period; no concept-drift handling yet.
-- PR-AUC 0.525 is solid for forward-in-time validation on a curated feature set, not a leaderboard-tuned figure — the value is a **trustworthy, reproducible, explainable** pipeline whose performance I can stand behind.
+- PR-AUC 0.540 is solid for forward-in-time validation on a curated feature set, not a leaderboard-tuned figure — the value is a **trustworthy, reproducible, explainable** pipeline whose performance I can stand behind.

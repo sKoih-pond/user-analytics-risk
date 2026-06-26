@@ -24,16 +24,17 @@ Both on the **same time-based split** (train earlier 70%, test later 30% — no 
 
 | Model | Features | PR-AUC | ROC-AUC |
 |---|---|---|---|
-| **Explainable (production)** | every **documented** feature — amount, all association counts (C1–14), all time-deltas (D1–15), match flags, distances, card/email/device/identity, hour — + a validated customer id, cross-account sharing & a leak-free per-customer baseline | **0.518** | **0.900** |
-| Black-box (comparison) | the same **+ all 339 anonymised V-columns** | 0.538 | 0.904 |
+| **Explainable (production)** | every **documented** feature + **rarity (frequency) encoding**, **amount-vs-card-group z-scores**, **drift-normalised time-deltas**, calendar/holiday, behavioural hour-distance, validated customer id | **0.540** | **0.913** |
+| Black-box (comparison) | the same **+ all 339 anonymised V-columns** | 0.538 | 0.911 |
 
-**The headline:** the 339 opaque features add only **+0.020 PR-AUC and +0.004 ROC-AUC** on top of the explainable model. Explainability is effectively *free* — so the model I can defend ships. ![model comparison](charts/model_comparison.png)
+**The headline:** the 339 opaque features add **nothing** — the black-box (0.538 / 0.911) is **essentially identical to, in fact marginally below**, the explainable model (0.540 / 0.913). Explainability isn't a compromise here; with the right feature engineering it's the **better** model. At **ROC-AUC 0.913** it sits within ~0.01 of the domain expert's published **0.9245** (kyakovlev) — using *only documented features*. ![model comparison](charts/model_comparison.png)
 
-- **Customer-id, validated (the craft step most skip):** the V-columns are mostly entity aggregations, so I rebuilt that signal *explainably* via an "account birthday" (`transaction-day − D1`, constant per real card-account). I then **pressure-tested the grouping** — a *strict* key over-fragmented customers (222k customers, 2.65 txns each); the *simple+chained* key (`card1+birthday`, strays rescued via "days since last purchase") gives **150k customers, 3.92 txns each, still 94% label-coherent** — the correct entity.
-- **Honest finding — right tool, wrong fraud type:** even with longer histories the per-customer baseline **didn't move the model**. The deviation idea catches **account-takeover** (an account behaving unlike itself); this dataset is mostly **first-transaction card fraud** (a stolen card used once) with no personal "normal" to deviate from. It's the right approach for a **repeat-user platform** (an exchange like Binance); here the signal lives in the association counts. Matching technique to fraud type is the judgement.
+- **Explainable feature engineering (adapted from the domain expert):** the biggest lifts came from **rarity encoding** (how often a card/email value appears — `card2_fq` and `card1_fq` are now top features), **amount-vs-card-group z-scores** (aggregated on *high-volume* card groups, not the thin reconstructed customer), and **drift-normalising the time-deltas** per month so they mean the same thing across the timeline. All explainable; none use the V-columns.
+- **Customer-id, validated (the craft step most skip):** rebuilt the customer *explainably* via an "account birthday" (`transaction-day − D1`). Pressure-testing showed a *strict* key over-fragmented (222k customers, 2.65 txns each) while the *simple+chained* key gives **150k, 3.92 txns each, 94% label-coherent** — the correct entity.
+- **Honest finding — right tool, wrong fraud type:** the per-customer *baseline* still didn't move the model, because this dataset is **first-transaction card fraud** (no personal "normal" to deviate from). The baseline is the right tool for a **repeat-user platform** (an exchange like Binance); here the lift comes from the **fat-group aggregations + rarity** above. Matching technique to fraud type is the judgement.
 - **Time-based honesty:** a random split flatters fraud models by letting them see the future; all numbers above are forward-in-time.
-- **Operating points** (set the alarm on cost): flag riskiest 1% → precision 0.86 / recall 0.25; 2% → 0.68 / 0.39; 5% → 0.40 / 0.57.
-- **Top drivers** (all explainable): association counts (C1/C14/C6/C13), time-deltas, email domains, billing region.
+- **Operating points** (set the alarm on cost): flag riskiest 1% → precision 0.87 / recall 0.25; 2% → 0.70 / 0.40; 5% → 0.41 / 0.60.
+- **Top drivers** (all explainable): association counts (C1/C14/C9/C13), **card rarity** (`card2_fq`, `card1_fq`), email domain, card type.
 
 ## Limitations (interview-ready)
 Client id is an approximation; baseline feature set by design; `confirmed_fraud` tag is label-derived. The value here is a **trustworthy, reproducible pipeline** (dbt-tested) with an evaluation that interrogates its own signals — not a leaderboard score.

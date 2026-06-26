@@ -13,6 +13,7 @@ Importable: model_blackbox.py reuses prepare() and adds the V-columns for the co
 """
 import numpy as np
 import pandas as pd
+from pandas.tseries.holiday import USFederalHolidayCalendar
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import average_precision_score, roc_auc_score, precision_score, recall_score
@@ -21,10 +22,17 @@ from db import get_con, write_table
 C = [f"c{i}" for i in range(1, 15)]
 D = [f"d{i}" for i in range(1, 16)]
 M = [f"m{i}" for i in range(1, 10)]
+# kyakovlev-style explainable FE (added):
+FREQ = [c + "_fq" for c in ["card1", "card2", "card3", "card5", "addr1",
+                            "p_emaildomain", "r_emaildomain", "uid_a", "uid_b"]]   # rarity
+AMTZ = ["uid_a_amt_z", "card1_amt_z"]                                              # amount vs card-group normal
+CAL = ["dow", "dom", "is_holiday", "is_december"]                                  # calendar
+DNORM = [f"d{i}_norm" for i in range(1, 16)]                                       # drift-normalised time-deltas
+EXTRA = ["hr_dist"]                                                                # hour vs card's usual hour
 NUMERIC = (["amount", "hr", "dist1", "dist2", "addr1", "addr2", "id_01", "id_02", "id_05", "id_06",
             "device_share", "email_share",
             "uid_prior_count", "time_since_prior", "uid_prior_mean_amt",
-            "amount_z_individual", "amount_z_profile"] + C + D)
+            "amount_z_individual", "amount_z_profile"] + C + D + FREQ + AMTZ + CAL + DNORM + EXTRA)
 CATEGORICAL = (["card_network", "card_type", "product_cd", "p_emaildomain", "r_emaildomain",
                 "devicetype", "has_identity", "new_device"] + M)
 
@@ -60,6 +68,18 @@ def engineer(df):
     df["account_birthday"] = df.day - df.d1
     df["has_identity"] = df.devicetype.notna()
 
+    # calendar features (real datetime from the 2017-12-01 reference)
+    dt = pd.to_datetime("2017-12-01") + pd.to_timedelta(df.transactiondt, unit="s")
+    df["dow"] = dt.dt.dayofweek
+    df["dom"] = dt.dt.day
+    df["is_december"] = (dt.dt.month == 12).astype(int)
+    df["dt_m"] = (dt.dt.year - 2017) * 12 + dt.dt.month
+    hol = USFederalHolidayCalendar().holidays(start="2017-10-01", end="2019-01-01")
+    df["is_holiday"] = dt.dt.normalize().isin(hol).astype(int)
+    # fat card-group keys for aggregation (high-volume groups, not the thin reconstructed customer)
+    df["uid_a"] = s(df.card1) + "_" + s(df.card2)
+    df["uid_b"] = df.uid_a + "_" + s(df.card3) + "_" + s(df.card5)
+
     # OLD strict key (kept only to validate the change)
     df["uid_strict"] = (s(df.card1)+"_"+s(df.card2)+"_"+s(df.card3)+"_"+s(df.card5)
                         + "_"+s(df.addr1)+"_"+s(df.account_birthday.astype("Int64")))
@@ -88,6 +108,10 @@ def engineer(df):
     df["amount_z_individual"] = ((df.amount - df.uid_prior_mean_amt) / std).where((df.uid_prior_count >= 2) & (std > 0))
     df["time_since_prior"] = g.transactiondt.diff()
     df["new_device"] = df.deviceinfo.notna() & ~df.duplicated(["uid", "deviceinfo"], keep="first")
+    # drift-normalise the time-deltas per month (they grow over time; target-free)
+    for d in D:
+        gm = df.groupby("dt_m")[d]
+        df[d + "_norm"] = (df[d] - gm.transform("mean")) / gm.transform("std")
     return df
 
 
@@ -97,6 +121,17 @@ def prepare(con):
     train = df.transactiondt <= cut
     prof = df[train].groupby("product_cd")["amount"].agg(["mean", "std"])
     df["amount_z_profile"] = (df.amount - df.product_cd.map(prof["mean"])) / df.product_cd.map(prof["std"])
+
+    # --- kyakovlev-style FE, all computed on the TRAINING period only (no future/target leakage) ---
+    # frequency / rarity encoding
+    for col in ["card1", "card2", "card3", "card5", "addr1", "p_emaildomain", "r_emaildomain", "uid_a", "uid_b"]:
+        df[col + "_fq"] = df[col].map(df.loc[train, col].value_counts())
+    # amount vs its card-group's normal (fat groups -> stable stats)
+    for g in ["uid_a", "card1"]:
+        st = df.loc[train].groupby(g)["amount"].agg(["mean", "std"])
+        df[g + "_amt_z"] = (df.amount - df[g].map(st["mean"])) / df[g].map(st["std"])
+    # behavioural: hour vs this card's usual hour
+    df["hr_dist"] = df.hr - df.card1.map(df.loc[train].groupby("card1")["hr"].mean())
     return df, train
 
 
