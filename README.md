@@ -35,8 +35,9 @@ sources (raw.transactions, raw.identity)
 ```
 Tested (not_null / unique on keys, relationships across layers, accepted_values on tags and
 segments, 2 singular tests), documented (model + column descriptions), with an **exposure**
-pointing at the dashboard. `DBT_PROFILES_DIR=. dbt build` passes clean and `dbt docs generate`
-works on DuckDB; the BigQuery target is one auth step away (see [`dbt/BIGQUERY.md`](dbt/BIGQUERY.md)).
+pointing at the dashboard. `DBT_PROFILES_DIR=. dbt build` passes clean (PASS=55) and
+`dbt docs generate` works on **both** DuckDB and the **BigQuery free sandbox** from the same
+codebase (see [`dbt/BIGQUERY.md`](dbt/BIGQUERY.md)).
 
 ## Phases
 - **Phase 1 — core (closes the dbt + cloud-BI skill gap):**
@@ -92,9 +93,9 @@ docs/        eda.md, approach_and_decisions.md, results.md, jd_mapping.md, learn
 **Run on real IEEE-CIS data** (2026-06-26): 590,540 txns → layered, tested dbt marts → RFM segmentation + a user-tagging system + an **explainable, time-validated fraud model**. Headline: the explainable model (only *documented* features + engineered customer-id/baseline) scores **PR-AUC 0.54 / ROC-AUC 0.913**; adding all 339 anonymised columns adds **nothing** (black-box ROC-AUC 0.913 — essentially identical, explainable marginally ahead) — so explainability is not a compromise here, it is the better model. Within ~0.01 ROC-AUC of the domain expert's published 0.9245, using only documented features. Full reasoning in **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**; numbers + charts in **[`docs/results.md`](docs/results.md)**. The **durable** dashboard artifacts are this repo + the PNG charts in `docs/charts/`; the live dashboard (Looker Studio on BigQuery) builds from the dbt marts.
 
 ## Status
-- **dbt**: layered project (staging → intermediate → marts), tested + documented, with an exposure. `dbt build` + `dbt docs generate` pass clean on **DuckDB**; BigQuery target is one auth step away (`dbt/BIGQUERY.md`).
-- **BigQuery**: profile + loader + docs ready; runs against the free sandbox after a one-time `gcloud auth application-default login`.
-- **Dashboard**: Looker Studio on BigQuery (free, permanent) — build spec ready in `dashboards/looker_studio_setup.md`, builds once the BigQuery run is done; durable PNG tiles committed in `docs/charts/`. (Metabase was dropped: only a billable plan was available, and BigQuery + Looker Studio cover the cloud-BI claim for free.)
+- **dbt**: layered project (staging → intermediate → marts), tested + documented, with an exposure. `dbt build` (PASS=55) + `dbt docs generate` pass clean on **both DuckDB and the BigQuery free sandbox** from one codebase.
+- **BigQuery**: done — ran against the free sandbox (no billing); the marts are populated (39,974 clients). Reproduce via `dbt/BIGQUERY.md`.
+- **Dashboard**: Looker Studio on BigQuery (free, permanent) — build spec ready in `dashboards/looker_studio_setup.md`, builds on the live BigQuery marts; durable PNG tiles committed in `docs/charts/`. (Metabase was dropped: only a billable plan was available, and BigQuery + Looker Studio cover the cloud-BI claim for free.)
 - Next: Phase 2 ring detection, a productionised alert threshold, cohort/A-B analysis.
 
 > **Cost guardrail.** BigQuery free sandbox only (never enable billing); Looker Studio is
