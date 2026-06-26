@@ -27,12 +27,21 @@ Instead of a default cut-off, I report precision/recall at several **alert volum
 
 - *Why:* a fraud team has finite review capacity and false accusations have real cost. The right threshold is a business choice, and I surface the trade-off rather than hide it behind 0.5.
 
-## Decision 4 — Entity resolution + a per-customer baseline (judgement, not raw columns)
-The V-columns are mostly **aggregations over entities** (card/email/device). So instead of using the black box, I rebuilt that signal explainably:
-- **Sharper customer id:** `card1` alone is far too coarse (it maps to ~11 different accounts). I combined the card components + billing region + an **"account birthday"** (`transaction-day − D1`, which is constant per real account) into a stable customer id.
-- **Leak-free per-customer baseline:** for each transaction I compute the customer's *normal* from their **earlier** transactions only (amount mean/std, count, time-since-last, is-this-device-new), then how far this transaction **deviates** — both a model feature and an explainable alert rule.
-- **Profile fallback:** for brand-new customers (no history) I fall back to the norm for their product/segment.
-- *Honest finding:* on **this** dataset the per-customer baseline barely moved the score — ~222k customers over 590k transactions means most appear once or twice, so there's little personal history to deviate from. It's the **right** approach for a **repeat-user platform** (an exchange like Binance has ongoing accounts); on one-shot card data the signal lives in the association counts. Knowing *when* a technique fits is part of the judgement.
+## Decision 4 — Entity resolution, validated; and knowing when a technique fits
+The V-columns are mostly **aggregations over entities** (card/email/device), so I rebuilt that signal explainably rather than use the black box. The "account birthday" trick (`transaction-day − D1`, constant per real card-account) is the key — I later confirmed it's the same anchor the competition's UID expert (kyakovlev) used.
+
+**I pressure-tested my own customer id** (the step beginners skip). My first key was *strict* — card components + billing region + birthday — on the instinct that "more fields = more precise". But matching on **all** of them **fragments** real customers whenever a field is blank or noisy. Validating it proved the point:
+
+| Customer key | Customers | Avg history | Label-purity* |
+|---|---|---|---|
+| Strict (many fields) | 222,452 | 2.65 txns | 96.7% |
+| **Simple + chained** (`card1 + birthday`, strays rescued via "days since last purchase") | **150,656** | **3.92 txns** | 94.4% |
+
+\*share of multi-transaction customers that are all-fraud or all-honest — the "did I merge two different people?" check.
+
+So the simpler key (plus timeline-chaining) gives **32% fewer, ~50% longer, still 94%-coherent** customer histories — the correct entity. **But the model didn't improve** (≈0.52 PR-AUC / 0.90 ROC-AUC either way), and the per-customer baseline features still don't rank.
+
+- *The real insight:* the baseline/deviation idea catches **account-takeover** — an account behaving unlike itself. This dataset's fraud is mostly **first-transaction card fraud** (a stolen card used once), so there's no personal "normal" to deviate from, however well you reconstruct the customer. The baseline is the **right tool for a repeat-user platform** (an exchange like Binance), and genuinely the wrong lever here. Matching the technique to the fraud type is the judgement — and *"I validated my own grouping and found it over-fragmented, then learned the technique doesn't fit this fraud type"* is a stronger interview answer than a number.
 
 ## Decision 5 — Test my own signals honestly
 My rule-of-thumb risk tags (`multi_identity`, `high_velocity`) sit **at or below** the 3.5% base fraud rate — i.e. they **don't** concentrate fraud. I kept that finding *in* (see `docs/results.md`) rather than hide it: simple rules look plausible but don't earn trust, so the learned model has to.

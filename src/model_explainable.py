@@ -41,16 +41,40 @@ SELECT = """
 """
 
 
+def s(x): return x.astype("Int64").astype(str)
+
+
+def quality(df, col):
+    """Validate a grouping with no answer key: history length + label-purity."""
+    size = df.groupby(col).size()
+    pure = df.groupby(col)["y"].nunique() == 1
+    multi = size[size > 1].index
+    return (f"{col:14s} groups={len(size):>7,}  mean_txns/uid={size.mean():.2f}  "
+            f"%multi-txn={(size > 1).mean()*100:4.1f}  label-purity(multi)={pure.loc[multi].mean()*100:5.1f}%")
+
+
 def engineer(df):
     df.columns = df.columns.str.lower()
-    day = np.floor(df.transactiondt / 86400)
+    df["day"] = np.floor(df.transactiondt / 86400)
     df["hr"] = np.floor((df.transactiondt % 86400) / 3600)
-    df["account_birthday"] = day - df.d1
+    df["account_birthday"] = df.day - df.d1
     df["has_identity"] = df.devicetype.notna()
 
-    def s(x): return x.astype("Int64").astype(str)
-    df["uid"] = (s(df.card1)+"_"+s(df.card2)+"_"+s(df.card3)+"_"+s(df.card5)
-                 + "_"+s(df.addr1)+"_"+s(df.account_birthday.astype("Int64")))
+    # OLD strict key (kept only to validate the change)
+    df["uid_strict"] = (s(df.card1)+"_"+s(df.card2)+"_"+s(df.card3)+"_"+s(df.card5)
+                        + "_"+s(df.addr1)+"_"+s(df.account_birthday.astype("Int64")))
+    # NEW simple key: card1 + account-birthday (kyakovlev base)
+    df["uid"] = s(df.card1)+"_"+s(df.account_birthday.astype("Int64"))
+    # rescue missing-birthday strays: chain on D3 (days since last txn -> predecessor day)
+    has_b = df.account_birthday.notna()
+    anchor = (df.loc[has_b, ["card1", "day", "uid"]].drop_duplicates(["card1", "day"])
+              .rename(columns={"day": "pred_day", "uid": "inh_uid"}))
+    nb = df.loc[~has_b, ["tid", "card1"]].copy()
+    nb["pred_day"] = (df.loc[~has_b, "day"] - df.loc[~has_b, "d3"]).values
+    nb = nb.merge(anchor, on=["card1", "pred_day"], how="left")
+    nb["new_uid"] = nb["inh_uid"].fillna("solo_" + nb["tid"].astype(str))
+    df.loc[~has_b, "uid"] = df.loc[~has_b, "tid"].map(nb.set_index("tid")["new_uid"]).values
+
     df["device_share"] = df.groupby("deviceinfo")["uid"].transform("nunique").where(df.deviceinfo.notna(), 1)
     df["email_share"] = df.groupby("p_emaildomain")["uid"].transform("nunique").where(df.p_emaildomain.notna(), 1)
 
@@ -88,6 +112,10 @@ def build_X(df, cols_numeric, cols_categorical):
 def main():
     con = get_con()
     df, train = prepare(con)
+    print("=== customer-id quality (strict vs simple+chained) ===")
+    print(quality(df, "uid_strict"))
+    print(quality(df, "uid"))
+    print()
     X, y = build_X(df, NUMERIC, CATEGORICAL), df["y"].astype(int)
     Xtr, Xte, ytr, yte = X[train], X[~train], y[train], y[~train]
     print(f"time-split: train {train.sum():,} | test {(~train).sum():,} | uids {df.uid.nunique():,} | features {X.shape[1]}")

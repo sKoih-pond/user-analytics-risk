@@ -24,16 +24,16 @@ Both on the **same time-based split** (train earlier 70%, test later 30% — no 
 
 | Model | Features | PR-AUC | ROC-AUC |
 |---|---|---|---|
-| **Explainable (production)** | every **documented** feature — amount, all association counts (C1–14), all time-deltas (D1–15), match flags, distances, card/email/device/identity, hour — + engineered sharper customer id, cross-account sharing & a leak-free per-customer baseline | **0.525** | **0.901** |
-| Black-box (comparison) | the same **+ all 339 anonymised V-columns** | 0.538 | 0.901 |
+| **Explainable (production)** | every **documented** feature — amount, all association counts (C1–14), all time-deltas (D1–15), match flags, distances, card/email/device/identity, hour — + a validated customer id, cross-account sharing & a leak-free per-customer baseline | **0.518** | **0.900** |
+| Black-box (comparison) | the same **+ all 339 anonymised V-columns** | 0.538 | 0.904 |
 
-**The headline:** the 339 opaque features add only **+0.013 PR-AUC and 0.000 ROC-AUC** on top of the explainable model. Explainability is effectively *free* — so the model I can defend ships. ![model comparison](charts/model_comparison.png)
+**The headline:** the 339 opaque features add only **+0.020 PR-AUC and +0.004 ROC-AUC** on top of the explainable model. Explainability is effectively *free* — so the model I can defend ships. ![model comparison](charts/model_comparison.png)
 
-- **Strategy that got here:** the V-columns are mostly entity aggregations, so I rebuilt that signal *explainably* — a sharper customer id (`card1+card2+card3+card5 + addr1 + account-birthday`) and behavioural features on top — rather than use the black box.
-- **Honest finding on per-customer baselines:** with ~222k customers over 590k transactions (~2.6 each), most appear once or twice, so a personal baseline has little history to learn from and barely moved the score here. It's the *right* approach for a **repeat-user platform** (e.g. an exchange); on one-shot card data the signal lives in the association counts.
+- **Customer-id, validated (the craft step most skip):** the V-columns are mostly entity aggregations, so I rebuilt that signal *explainably* via an "account birthday" (`transaction-day − D1`, constant per real card-account). I then **pressure-tested the grouping** — a *strict* key over-fragmented customers (222k customers, 2.65 txns each); the *simple+chained* key (`card1+birthday`, strays rescued via "days since last purchase") gives **150k customers, 3.92 txns each, still 94% label-coherent** — the correct entity.
+- **Honest finding — right tool, wrong fraud type:** even with longer histories the per-customer baseline **didn't move the model**. The deviation idea catches **account-takeover** (an account behaving unlike itself); this dataset is mostly **first-transaction card fraud** (a stolen card used once) with no personal "normal" to deviate from. It's the right approach for a **repeat-user platform** (an exchange like Binance); here the signal lives in the association counts. Matching technique to fraud type is the judgement.
 - **Time-based honesty:** a random split flatters fraud models by letting them see the future; all numbers above are forward-in-time.
-- **Operating points** (set the alarm on cost): flag riskiest 1% → precision 0.87 / recall 0.25; 2% → 0.69 / 0.40; 5% → 0.40 / 0.58.
-- **Top drivers** (all explainable): association counts (C1/C14/C13/C9), email domains, distances, time-deltas, billing region.
+- **Operating points** (set the alarm on cost): flag riskiest 1% → precision 0.86 / recall 0.25; 2% → 0.68 / 0.39; 5% → 0.40 / 0.57.
+- **Top drivers** (all explainable): association counts (C1/C14/C6/C13), time-deltas, email domains, billing region.
 
 ## Limitations (interview-ready)
 Client id is an approximation; baseline feature set by design; `confirmed_fraud` tag is label-derived. The value here is a **trustworthy, reproducible pipeline** (dbt-tested) with an evaluation that interrogates its own signals — not a leaderboard score.
