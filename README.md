@@ -1,6 +1,6 @@
 # User Analytics & Risk Platform
 
-End-to-end analytics project on a real payments/e-commerce transaction base (**IEEE-CIS Fraud**): **profile users, segment them, tag them, and detect fraud/abuse.** Built to mirror a Data-Analyst (Risk) brief and to demonstrate the modern analyst stack (SQL + **dbt** + Python + **Metabase**).
+End-to-end analytics project on a real payments/e-commerce transaction base (**IEEE-CIS Fraud**): **profile users, segment them, tag them, and detect fraud/abuse.** Built to mirror a Data-Analyst (Risk) brief and to demonstrate the modern analyst stack (SQL + **dbt** + Python + **BigQuery** + **Looker Studio**).
 
 Stack: **dbt** (layered, tested, documented transformations) · **DuckDB** (local warehouse) and **BigQuery** (free cloud sandbox) — the same dbt project runs on both · **Python** (pandas, scikit-learn) for the ML · **Looker Studio** on BigQuery (free, permanent BI dashboard).
 
@@ -23,7 +23,7 @@ Write-ups: **[results](docs/results.md)** · **[approach & decisions](docs/appro
 ## Why this project
 Maps almost line-by-line to the kind of work it showcases — user tagging systems, user profiling, customer segmentation, anomaly/fraud detection, behavioural analysis on large-scale data, in a fintech/internet-platform domain. See [`docs/jd_mapping.md`](docs/jd_mapping.md).
 
-> Honesty: this is a **capability demonstration** (a built artifact), not claimed work experience. dbt/Metabase/Postgres go on the CV only once this is genuinely built and running.
+> Honesty: this is a **capability demonstration** (a built artifact), not claimed work experience. dbt is built and running here (DuckDB); BigQuery and Looker Studio go on the CV only once genuinely run (the BigQuery target and dashboard spec are ready — see `dbt/BIGQUERY.md`).
 
 ## dbt project (the analytics layer)
 A layered, adapter-portable dbt project that runs on **both** DuckDB and BigQuery:
