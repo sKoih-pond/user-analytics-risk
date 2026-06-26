@@ -8,6 +8,6 @@ select
     devicetype                                                        as device_type,
     deviceinfo                                                        as device_info,
     id_31                                                             as browser,
-    id_01::double                                                     as id_01,
-    id_02::double                                                     as id_02
+    id_01,
+    id_02
 from i

@@ -22,7 +22,7 @@ agg as (
         min(event_ts)                            as first_ts,
         max(event_ts)                            as last_ts,
         sum(is_fraud)                            as n_fraud,
-        avg(is_fraud::double)                    as fraud_rate,
+        avg(is_fraud)                            as fraud_rate,
         avg(c1)                                  as avg_c1,
         avg(c13)                                 as avg_c13,
         avg(c14)                                 as avg_c14

@@ -119,6 +119,7 @@ models:
         tests:
           - accepted_values:
               values: [0, 1]
+              quote: false
       - name: fraud_rate
         description: "Share of the client's transactions labelled fraud (0-1)."
         tests: [not_null]

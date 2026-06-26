@@ -15,6 +15,7 @@ models:
           - not_null
           - accepted_values:
               values: [0, 1]
+              quote: false
       - name: client_id
         description: "User proxy (card1 + addr1). Approximation — IEEE-CIS has no explicit user id."
         tests: [not_null]

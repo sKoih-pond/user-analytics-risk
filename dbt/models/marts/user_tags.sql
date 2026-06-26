@@ -24,7 +24,7 @@ pct as (
 value_tags as (
     select
         client_id,
-        cast('value' as varchar) as tag_family,
+        'value' as tag_family,
         case
             when monetary_pct >= 91 and frequency_pct >= 76 then 'vip'
             when monetary_pct >= 76 then 'high'
@@ -36,7 +36,7 @@ value_tags as (
 lifecycle_tags as (
     select
         client_id,
-        cast('lifecycle' as varchar) as tag_family,
+        'lifecycle' as tag_family,
         case
             when n_txn <= 1 then 'one_off'
             when recency_days <= 30 then 'active'
@@ -47,24 +47,24 @@ lifecycle_tags as (
     from pct
 ),
 risk_confirmed as (
-    select client_id, cast('risk' as varchar) as tag_family, cast('confirmed_fraud' as varchar) as tag
+    select client_id, 'risk' as tag_family, 'confirmed_fraud' as tag
     from pct where fraud_rate > 0
 ),
 risk_multi as (
-    select client_id, cast('risk' as varchar) as tag_family, cast('multi_identity' as varchar) as tag
+    select client_id, 'risk' as tag_family, 'multi_identity' as tag
     from pct where coalesce(n_devices, 0) >= 3 or coalesce(n_emails, 0) >= 3
 ),
 risk_velocity as (
-    select client_id, cast('risk' as varchar) as tag_family, cast('high_velocity' as varchar) as tag
+    select client_id, 'risk' as tag_family, 'high_velocity' as tag
     from pct where c14_pct >= 96
 ),
 risk_any as (
     select client_id from risk_confirmed
-    union select client_id from risk_multi
-    union select client_id from risk_velocity
+    union distinct select client_id from risk_multi
+    union distinct select client_id from risk_velocity
 ),
 risk_clean as (
-    select client_id, cast('risk' as varchar) as tag_family, cast('clean' as varchar) as tag
+    select client_id, 'risk' as tag_family, 'clean' as tag
     from pct where client_id not in (select client_id from risk_any)
 )
 select * from value_tags
