@@ -23,7 +23,7 @@ Stack: **dbt** (layered, tested, documented transformations) · **DuckDB** (loca
 ## Why this project
 Maps almost line-by-line to the kind of work it showcases — user tagging systems, user profiling, customer segmentation, anomaly/fraud detection, behavioural analysis on large-scale data, in a fintech/internet-platform domain. See [`docs/jd_mapping.md`](docs/jd_mapping.md).
 
-> Honesty: this is a **capability demonstration** (a built artifact), not claimed work experience. dbt is built and running here (DuckDB); BigQuery and Looker Studio go on the CV only once genuinely run (the BigQuery target and dashboard spec are ready — see `dbt/BIGQUERY.md`).
+> Honesty: this is a **capability demonstration** (a built artifact), not claimed work experience. The dbt project is built and run on **both DuckDB and BigQuery** (free sandbox), and the **Looker Studio dashboard is live** on the BigQuery marts — all three are genuinely run here, so all three are claimed. Metabase was dropped (never built; kept only as an optional appendix in `dashboards/metabase_setup.md`).
 
 ## dbt project (the analytics layer)
 A layered, adapter-portable dbt project that runs on **both** DuckDB and BigQuery:
