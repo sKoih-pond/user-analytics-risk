@@ -47,13 +47,14 @@ df = con.execute("""
 fig, ax = plt.subplots(figsize=(6, 4)); ax.bar(df.segment.astype(str), df.afr, color="#72B7B2")
 ax.set_title("Fraud rate by segment"); ax.set_xlabel("segment"); ax.set_ylabel("avg fraud_rate"); save(fig, "fraud_by_segment.png")
 
-# 5. Explainable vs black-box (measured PR-AUC on the same time-based split;
-#    reproduce via src/model_explainable.py and src/model_blackbox.py)
-fig, ax = plt.subplots(figsize=(5.5, 4))
-bars = ax.bar(["Explainable\n(production)", "Black-box\n(+339 V-cols)"], [0.540, 0.538],
-              color=["#54A24B", "#9D9D9D"])
+# 5. Model benchmark: explainable HGB vs black-box vs deep learning (measured PR-AUC, same
+#    time-split; reproduce via src/model_explainable.py, src/model_blackbox.py, src/model_deep.py)
+fig, ax = plt.subplots(figsize=(7, 4))
+bars = ax.bar(["Explainable\nHGB", "Black-box\n(+339 V)", "Deep MLP\n(embeddings)", "Autoencoder\n(anomaly)"],
+              [0.540, 0.538, 0.316, 0.057],
+              color=["#54A24B", "#9D9D9D", "#4C78A8", "#F58518"])
 ax.bar_label(bars, fmt="%.3f"); ax.set_ylim(0, 0.65); ax.set_ylabel("PR-AUC (time-split)")
-ax.set_title("Explainable model matches the 339-column black box")
+ax.set_title("Well-engineered gradient boosting beats deep learning here")
 save(fig, "model_comparison.png")
 
 con.close()

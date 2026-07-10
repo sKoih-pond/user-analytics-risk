@@ -92,11 +92,14 @@ docs/        eda.md, approach_and_decisions.md, results.md, jd_mapping.md, learn
 ## Results
 **Run on real IEEE-CIS data** (2026-06-26): 590,540 txns → layered, tested dbt marts → RFM segmentation + a user-tagging system + an **explainable, time-validated fraud model**. Headline: the explainable model (only *documented* features + engineered customer-id/baseline) scores **PR-AUC 0.54 / ROC-AUC 0.913**; adding all 339 anonymised columns adds **nothing** (black-box ROC-AUC 0.913 — essentially identical, explainable marginally ahead) — so explainability is not a compromise here, it is the better model. Within ~0.01 ROC-AUC of the domain expert's published 0.9245, using only documented features. Full reasoning in **[`docs/approach_and_decisions.md`](docs/approach_and_decisions.md)**; numbers + charts in **[`docs/results.md`](docs/results.md)**. The **durable** dashboard artifacts are this repo + the PNG charts in `docs/charts/`; the live dashboard (Looker Studio on BigQuery) builds from the dbt marts.
 
+Beyond the model, two decisions that matter to a risk team: a **cost-sensitive decision layer** (`src/decision_layer.py`) that turns scores into an expected-value block/allow policy on transaction amount — **73% cheaper than a naive 0.5 threshold**, recovering 80% of fraud exposure — and a **deep-learning benchmark** (`src/model_deep.py`, PyTorch MLP + autoencoder) showing deep learning **does not beat** well-engineered gradient boosting on this tabular data (the reason the production model stays HGB).
+
 ## Status
 - **dbt**: layered project (staging → intermediate → marts), tested + documented, with an exposure. `dbt build` (PASS=55) + `dbt docs generate` pass clean on **both DuckDB and the BigQuery free sandbox** from one codebase.
 - **BigQuery**: done — ran against the free sandbox (no billing); the marts are populated (39,974 clients). Reproduce via `dbt/BIGQUERY.md`.
 - **Dashboard**: **[live on Looker Studio](https://lookerstudio.google.com/reporting/d0032be5-ae94-487d-8046-d5649f64453c)** (free, permanent), built on the BigQuery `user_risk_profile` mart — total clients, segment overview, and fraud rate by segment; durable PNG tiles also in `docs/charts/`. (Metabase was dropped: only a billable plan was available, and BigQuery + Looker Studio cover the cloud-BI claim for free.)
-- Next: Phase 2 ring detection, a productionised alert threshold, cohort/A-B analysis.
+- **Decision layer + deep-learning benchmark**: `src/decision_layer.py` (expected-value thresholding on amount → `marts.txn_decision` + `cost_curve.png`) and `src/model_deep.py` (PyTorch MLP + autoencoder vs boosting). Reproduce per `docs/learning_path.md` steps 6b–6c.
+- Next: Phase 2 ring detection, cohort/A-B analysis.
 
 > **Cost guardrail.** BigQuery free sandbox only (never enable billing); Looker Studio is
 > free; no cards anywhere. With Metabase dropped there is no trial to tear down.

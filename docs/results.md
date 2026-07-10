@@ -49,6 +49,28 @@ Both on the **same time-based split** (train earlier 70%, test later 30% — no 
 - **Operating points** (set the alarm on cost): flag riskiest 1% → precision 0.87 / recall 0.25; 2% → 0.70 / 0.40; 5% → 0.41 / 0.60.
 - **Top drivers** (all explainable): association counts (C1/C14/C9/C13), **card rarity** (`card2_fq`, `card1_fq`), email domain, card type.
 
+## Cost-sensitive decision layer (economic logic → a profitable decision)
+Turning the scores into a decision on **dollar cost** (`src/decision_layer.py`), on the same later-30% holdout ($3/flag review cost; a missed fraud loses the transaction amount):
+
+| Policy | Realised cost | Recall | Alert |
+|---|---|---|---|
+| Naive threshold 0.5 | $708k | 0.36 | 1.6% |
+| Cost-optimal single threshold (t*≈0.018) | $255k | 0.87 | 25% |
+| **Amount-weighted EV policy** (`block iff p×amount > review`) | **$190k** | 0.76 | 19% |
+
+The expected-value policy is **73% cheaper than naive-0.5** and recovers **80% of the $967k fraud exposure**, blocking higher-value transactions (avg **$354 vs $85**). It beats *any* single global threshold because it weighs the dollars at risk, not just the probability; a sensitivity sweep confirms the optimal threshold tracks the review-cost assumption. ![cost curve](charts/cost_curve.png)
+
+## Deep-learning benchmark (does a neural net beat boosting?)
+Two PyTorch models on the same features + time-split (`src/model_deep.py`): a supervised **MLP with entity embeddings** and an **autoencoder** anomaly detector (trained on legit only).
+
+| Model | PR-AUC | ROC-AUC |
+|---|---|---|
+| Explainable HistGradientBoosting | **0.540** | **0.913** |
+| Deep MLP (embeddings) | 0.316 | 0.853 |
+| Autoencoder (anomaly) | 0.057 | 0.641 |
+
+Deep learning **does not beat** well-engineered gradient boosting on this tabular problem — the expected result, and why the production model stays HGB. The autoencoder's "unlike normal" premise fits repeat-user account-takeover, not this dataset's first-transaction card fraud.
+
 ## Limitations (interview-ready)
 Client id is an approximation; baseline feature set by design; `confirmed_fraud` tag is label-derived. The value here is a **trustworthy, reproducible pipeline** (dbt-tested) with an evaluation that interrogates its own signals — not a leaderboard score.
 

@@ -53,6 +53,28 @@ I split the work by what each tool is good at. The deterministic, rule-based tra
 - *Segmentation in SQL, not Python:* I made the dashboard segmentation **RFM in dbt** because it is deterministic, documented and re-runs identically on any warehouse. KMeans stays as a Python alternative (`user_segments_kmeans`) because it earns its place: it surfaces a tiny ultra-whale cohort that the broad RFM bands dilute. Right tool per job, not one tool for everything.
 - *Portable on purpose:* the same models run on **DuckDB** (free local iteration) and **BigQuery** (free sandbox) by using dbt's cross-database macros and NTILE-based thresholds instead of warehouse-specific functions. One project, two warehouses, no forked SQL.
 
+## Decision 7 — From a cost *framing* to a cost *decision* (implemented)
+Decision 3 argued the threshold should be set on business cost; `src/decision_layer.py` now does it. Using each transaction's **amount** (a missed fraud loses the amount; a flag costs a flat review fee), on the same later-30% holdout:
+
+| Policy | Realised cost | Recall | Alert rate |
+|---|---|---|---|
+| Naive threshold 0.5 | $708k | 0.36 | 1.6% |
+| Cost-optimal single threshold (t*≈0.018) | $255k | 0.87 | 25% |
+| **Amount-weighted EV policy** (block iff `p×amount > review`) | **$190k** | 0.76 | 19% |
+
+- *Result:* the expected-value policy is **73% cheaper than naive-0.5** and recovers **80% of the $967k fraud exposure**. It blocks higher-value transactions (avg **$354 vs $85**) because it decides on *expected dollars at risk*, not probability alone — so it beats **any** global threshold (see `docs/charts/cost_curve.png`).
+- *Why it matters:* this is the difference between a model and a **decision**. Two transactions with the same probability but different amounts are not the same risk.
+- *Honesty:* the dollar costs are labelled **assumptions**; a sensitivity sweep shows the optimal threshold moves predictably with the review cost. The method, not the exact $, is the point.
+- *Interviewer Q: "How would you deploy this?"* → score, then block on expected value under a review-capacity constraint; recalibrate the costs to the business.
+
+## Decision 8 — Deep learning as a benchmark (and why boosting still wins)
+I added two PyTorch models (`src/model_deep.py`): a **supervised MLP with entity embeddings**, and an **autoencoder** anomaly detector trained on legitimate transactions only. Same features, same time-split.
+- *Result on the holdout:* MLP **PR-AUC 0.316 / ROC-AUC 0.853**; autoencoder **0.057 / 0.641** — both **below** the explainable HistGradientBoosting (**0.540 / 0.913**).
+- *Why:* on tabular data with strong hand-engineered features, gradient boosting is the known strong baseline; a generic MLP must *learn* the interactions boosting exploits natively, and the autoencoder's "unlike normal" premise fits repeat-user account-takeover, not this dataset's first-transaction card fraud (same point as Decision 4).
+- *The honest finding:* deep learning **did not beat** well-engineered boosting here — which is exactly why the production model stays HGB. Knowing when *not* to reach for a neural net is the judgement.
+- *Caveat I'd raise myself:* the MLP was still improving at 8 epochs; more tuning would close some gap but not overtake 0.540 — and it would remain the less explainable choice.
+- *Interviewer Q: "Did you try deep learning?"* → yes, benchmarked both an MLP and an autoencoder; documented that they underperform boosting on this problem, and why.
+
 ## What actually drives the model (so I can defend any flag)
 Top signals by permutation importance: **association counts (C1, C14, C9, C13)**, **card rarity** (`card2_fq`, `card1_fq`), **email domain**, **card type**. All interpretable — a flag reads as e.g. *"this card is linked to an unusually high number of addresses, with a risky email domain and an odd billing distance."*
 
