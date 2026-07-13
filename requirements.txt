@@ -12,6 +12,9 @@ python-dotenv>=1.0
 # Deep-learning benchmark (src/model_deep.py)
 torch>=2.2
 
+# MLOps: experiment tracking + model registry (src/mlflow_track.py)
+mlflow>=2.9,<3
+
 # Phase 2 (abuse-ring / graph)
 networkx>=3.2
 

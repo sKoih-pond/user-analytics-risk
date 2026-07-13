@@ -75,6 +75,15 @@ I added two PyTorch models (`src/model_deep.py`): a **supervised MLP with entity
 - *Caveat I'd raise myself:* the MLP was still improving at 8 epochs; more tuning would close some gap but not overtake 0.540 — and it would remain the less explainable choice.
 - *Interviewer Q: "Did you try deep learning?"* → yes, benchmarked both an MLP and an autoencoder; documented that they underperform boosting on this problem, and why.
 
+## Decision 9 — Experiment tracking + model registry (MLflow)
+Four models now compete for the fraud-scoring slot (explainable HGB, black-box HGB, deep MLP, autoencoder), plus a cost-decision metric. `src/mlflow_track.py` tracks them properly: **one command** trains each on the same time-split and logs a run to the `fraud-detection` experiment — params, PR-AUC / ROC-AUC + precision/recall at a 1% alert rate, the **model artifact**, and the comparison/cost charts — then registers the explainable model in the **Model Registry** as `fraud-explainable-hgb` with the `@champion` alias.
+- *Why:* "which model, trained how, scoring what" should be reproducible and comparable, not scattered across four scripts' stdout. A registry makes the champion explicit and promotable.
+- *Backend:* local **SQLite** (`sqlite:///mlflow.db`) so both tracking *and* the registry run with no server. Inspect: `mlflow ui --backend-store-uri sqlite:///mlflow.db`.
+- *Result:* 4 tracked runs; the explainable model registered + aliased `champion`; its business value logged on the run (**73% cheaper** than a naive threshold, **80% of fraud exposure** recovered).
+- *Why the explainable model is champion even though the V-columns score within ~0.01:* the black-box's edge is inside run-to-run noise (it flips direction on reseeding), so the 339 anonymised columns don't buy a reliable, meaningful lift — not worth losing explainability (Decision 1).
+- *Honesty:* the store (`mlflow.db`, `mlruns/`) is gitignored (regenerable); the code + the run export in `results.md` are the committed evidence. Kubeflow would need a Kubernetes cluster — out of scope for a local project.
+- *Interviewer Q: "How do you manage models?"* → tracked experiments + a registry with a champion alias; every model reproducible from one command.
+
 ## What actually drives the model (so I can defend any flag)
 Top signals by permutation importance: **association counts (C1, C14, C9, C13)**, **card rarity** (`card2_fq`, `card1_fq`), **email domain**, **card type**. All interpretable — a flag reads as e.g. *"this card is linked to an unusually high number of addresses, with a risky email domain and an odd billing distance."*
 

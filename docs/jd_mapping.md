@@ -15,6 +15,7 @@ How this project demonstrates each requirement. **Capability shown by a built ar
 | ML applied to user data (advantage) | classifier + Isolation Forest |
 | **Cost-sensitive decisioning / economic logic** (profitable decisions) | `src/decision_layer.py` — expected-value policy on transaction amount → `marts.txn_decision`; `docs/charts/cost_curve.png` |
 | **Deep learning** (boosting vs neural nets) | `src/model_deep.py` — PyTorch MLP (entity embeddings) + autoencoder, benchmarked vs gradient boosting on the same time-split |
+| **MLOps: experiment tracking + model registry** | `src/mlflow_track.py` — MLflow (SQLite backend): 4 models logged to one experiment, champion registered + aliased `@champion` |
 | **Bonus / promo abuse, fraudulent studio groups** (preferred) | `src/abuse_rings.py` (Phase 2: shared-device/IP graph → ring detection) |
 | **A/B testing, user lifecycle** (preferred) | Phase 2: cohort/retention + mock experiment |
 | **Large-scale behavioural datasets** (preferred) | event-level data aggregated to users; scales on Postgres/BigQuery |

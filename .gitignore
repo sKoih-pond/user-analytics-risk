@@ -13,3 +13,8 @@ metabase-data/
 
 # regenerable derived exports
 dashboards/exports/*.csv
+
+# MLflow local store (regenerable via src/mlflow_track.py; commit code + UI screenshots only)
+mlflow.db
+mlruns/
+mlartifacts/

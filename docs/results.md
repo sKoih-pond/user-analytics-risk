@@ -71,6 +71,18 @@ Two PyTorch models on the same features + time-split (`src/model_deep.py`): a su
 
 Deep learning **does not beat** well-engineered gradient boosting on this tabular problem — the expected result, and why the production model stays HGB. The autoencoder's "unlike normal" premise fits repeat-user account-takeover, not this dataset's first-transaction card fraud.
 
+## Experiment tracking + model registry (MLflow)
+`src/mlflow_track.py` logs every model to one MLflow experiment (`fraud-detection`) and registers the champion — reproduce with `python src/mlflow_track.py`, then `mlflow ui --backend-store-uri sqlite:///mlflow.db`.
+
+| Run (tracked) | PR-AUC | ROC-AUC | Model artifact |
+|---|---|---|---|
+| **explainable-hgb** (registered `@champion`) | 0.539 | 0.913 | ✅ |
+| blackbox-hgb (+339 V-columns) | 0.548 | 0.913 | ✅ |
+| deep-mlp (PyTorch) | 0.316 | 0.853 | ✅ |
+| autoencoder (PyTorch) | 0.057 | 0.641 | ✅ |
+
+Every run logs params, metrics, and the model artifact; the champion (`fraud-explainable-hgb`, alias `@champion`) additionally logs its **business value** — naive-0.5 realised cost **$700k** → amount-weighted expected-value policy **$190k** (73% cheaper, 80% of fraud exposure recovered). Explainable vs black-box sits within ~0.01 (run-to-run noise), so the champion is chosen on explainability, not a fragile decimal. The local store is gitignored; this table is the committed run export.
+
 ## Limitations (interview-ready)
 Client id is an approximation; baseline feature set by design; `confirmed_fraud` tag is label-derived. The value here is a **trustworthy, reproducible pipeline** (dbt-tested) with an evaluation that interrogates its own signals — not a leaderboard score.
 

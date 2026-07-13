@@ -125,7 +125,7 @@ def train_ae(Xn, tr_legit_idx, te_idx):
     m.eval()
     with torch.no_grad():
         err = ((m(x[te_idx]) - x[te_idx]) ** 2).mean(1).numpy()   # reconstruction error = anomaly score
-    return err
+    return m, err
 
 
 def main():
@@ -152,7 +152,7 @@ def main():
 
     print("\n[2] autoencoder (trained on legit only)")
     tr_legit = tr_all[y[tr_all] == 0]
-    err = train_ae(Xn, tr_legit, te_idx)
+    _, err = train_ae(Xn, tr_legit, te_idx)
     ap_ae, roc_ae = average_precision_score(y[te_idx], err), roc_auc_score(y[te_idx], err)
 
     print("\n=== benchmark on the same later-30% holdout ===")

@@ -99,6 +99,7 @@ Beyond the model, two decisions that matter to a risk team: a **cost-sensitive d
 - **BigQuery**: done — ran against the free sandbox (no billing); the marts are populated (39,974 clients). Reproduce via `dbt/BIGQUERY.md`.
 - **Dashboard**: **[live on Looker Studio](https://lookerstudio.google.com/reporting/d0032be5-ae94-487d-8046-d5649f64453c)** (free, permanent), built on the BigQuery `user_risk_profile` mart — total clients, segment overview, and fraud rate by segment; durable PNG tiles also in `docs/charts/`. (Metabase was dropped: only a billable plan was available, and BigQuery + Looker Studio cover the cloud-BI claim for free.)
 - **Decision layer + deep-learning benchmark**: `src/decision_layer.py` (expected-value thresholding on amount → `marts.txn_decision` + `cost_curve.png`) and `src/model_deep.py` (PyTorch MLP + autoencoder vs boosting). Reproduce per `docs/learning_path.md` steps 6b–6c.
+- **MLOps (MLflow)**: `src/mlflow_track.py` logs all four models to one MLflow experiment and registers the champion (`fraud-explainable-hgb @champion`) in the model registry — local SQLite backend, `mlflow ui --backend-store-uri sqlite:///mlflow.db` to browse. Step 6d.
 - Next: Phase 2 ring detection, cohort/A-B analysis.
 
 > **Cost guardrail.** BigQuery free sandbox only (never enable billing); Looker Studio is
