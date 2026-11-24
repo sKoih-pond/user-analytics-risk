@@ -1,6 +1,6 @@
 """
 Render the dashboard charts as static PNGs into docs/charts/ — a PERMANENT portfolio
-artifact, independent of the (ephemeral) Metabase Cloud trial. Reads the dbt marts.
+artifact, independent of any live BI tool. Reads the dbt marts.
 """
 import os
 import matplotlib

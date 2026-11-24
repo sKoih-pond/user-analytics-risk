@@ -23,7 +23,7 @@ Stack: **dbt** (layered, tested, documented transformations) · **DuckDB** (loca
 ## Why this project
 Maps almost line-by-line to the kind of work it showcases — user tagging systems, user profiling, customer segmentation, anomaly/fraud detection, behavioural analysis on large-scale data, in a fintech/internet-platform domain. See [`docs/jd_mapping.md`](docs/jd_mapping.md).
 
-> Honesty: this is a **capability demonstration** (a built artifact), not claimed work experience. The dbt project is built and run on **both DuckDB and BigQuery** (free sandbox), and the **Looker Studio dashboard is live** on the BigQuery marts — all three are genuinely run here, so all three are claimed. Metabase was dropped (never built; kept only as an optional appendix in `dashboards/metabase_setup.md`).
+> Honesty: this is a **capability demonstration** (a built artifact), not claimed work experience. The dbt project is built and run on **both DuckDB and BigQuery** (free sandbox), and the **Looker Studio dashboard is live** on the BigQuery marts — all three are genuinely run here, so all three are claimed.
 
 ## dbt project (the analytics layer)
 A layered, adapter-portable dbt project that runs on **both** DuckDB and BigQuery:
@@ -71,7 +71,6 @@ python src/make_charts.py           # PNG dashboard tiles -> docs/charts/
 #   python src/load_bigquery.py && cd dbt && BQ_PROJECT=<id> DBT_PROFILES_DIR=. dbt build --target bigquery
 
 # 7. BI dashboard — Looker Studio on BigQuery (free, permanent): dashboards/looker_studio_setup.md
-#    (Metabase is an optional alternative, not part of the claimed stack: dashboards/metabase_setup.md)
 ```
 
 ## Structure
@@ -82,7 +81,7 @@ src/         load_ieee.py, load_bigquery.py, export_marts.py, segmentation.py(KM
 dbt/         dbt_project.yml, profiles.yml (duckdb + bigquery), BIGQUERY.md,
              models/{sources.yml, staging/, intermediate/, marts/, exposures.yml}, tests/
 data/        raw/ (gitignored — IEEE-CIS CSVs) + README (dataset + download)
-dashboards/  metabase_setup.md, looker_studio_setup.md, exports/ (gitignored CSVs)
+dashboards/  looker_studio_setup.md, exports/ (gitignored CSVs)
 docs/        eda.md, approach_and_decisions.md, results.md, jd_mapping.md, learning_path.md, charts/
 ```
 
@@ -97,10 +96,10 @@ Beyond the model, two decisions that matter to a risk team: a **cost-sensitive d
 ## Status
 - **dbt**: layered project (staging → intermediate → marts), tested + documented, with an exposure. `dbt build` (PASS=55) + `dbt docs generate` pass clean on **both DuckDB and the BigQuery free sandbox** from one codebase.
 - **BigQuery**: done — ran against the free sandbox (no billing); the marts are populated (39,974 clients). Reproduce via `dbt/BIGQUERY.md`.
-- **Dashboard**: **[live on Looker Studio](https://lookerstudio.google.com/reporting/d0032be5-ae94-487d-8046-d5649f64453c)** (free, permanent), built on the BigQuery `user_risk_profile` mart — total clients, segment overview, and fraud rate by segment; durable PNG tiles also in `docs/charts/`. (Metabase was dropped: only a billable plan was available, and BigQuery + Looker Studio cover the cloud-BI claim for free.)
+- **Dashboard**: **[live on Looker Studio](https://lookerstudio.google.com/reporting/d0032be5-ae94-487d-8046-d5649f64453c)** (free, permanent), built on the BigQuery `user_risk_profile` mart — total clients, segment overview, and fraud rate by segment; durable PNG tiles also in `docs/charts/`.
 - **Decision layer + deep-learning benchmark**: `src/decision_layer.py` (expected-value thresholding on amount → `marts.txn_decision` + `cost_curve.png`) and `src/model_deep.py` (PyTorch MLP + autoencoder vs boosting). Reproduce per `docs/learning_path.md` steps 6b–6c.
 - **MLOps (MLflow)**: `src/mlflow_track.py` logs all four models to one MLflow experiment and registers the champion (`fraud-explainable-hgb @champion`) in the model registry — local SQLite backend, `mlflow ui --backend-store-uri sqlite:///mlflow.db` to browse. Step 6d.
 - Next: Phase 2 ring detection, cohort/A-B analysis.
 
 > **Cost guardrail.** BigQuery free sandbox only (never enable billing); Looker Studio is
-> free; no cards anywhere. With Metabase dropped there is no trial to tear down.
+> free; no cards anywhere.

@@ -1,7 +1,6 @@
 """
-Export the dbt marts to CSV for the Metabase CSV-upload path (Metabase Cloud cannot reach a
-local DuckDB file). Writes to dashboards/exports/ (gitignored — regenerable). Run after
-`dbt build`.
+Export the dbt marts to CSV, for any tool that takes a file rather than a DuckDB connection.
+Writes to dashboards/exports/ (gitignored — regenerable). Run after `dbt build`.
 """
 import os
 from db import get_con
