@@ -13,8 +13,8 @@ Order to work through the project; each step is a real, CV-able skill.
 6d. **MLOps (MLflow)** — `python src/mlflow_track.py` logs all four models to one MLflow experiment (params/metrics/model artifact) and registers the champion; browse with `mlflow ui --backend-store-uri sqlite:///mlflow.db`.
 7. **Charts** — `python src/make_charts.py` regenerates the PNG dashboard tiles in `docs/charts/`.
 8. **BigQuery (free sandbox)** — one-time auth in `dbt/BIGQUERY.md`, then `python src/load_bigquery.py` and `dbt build --target bigquery`. Same project, cloud warehouse, zero cost.
-9. **BI dashboards** — Looker Studio on BigQuery (free, permanent): `dashboards/looker_studio_setup.md`. Metabase (Docker / local jar / Cloud trial): `dashboards/metabase_setup.md` — capture screenshots + the exported definition before any teardown.
+9. **BI dashboards** — Looker Studio on BigQuery (free, permanent): `dashboards/looker_studio_setup.md`.
 10. **Phase 2** — `src/abuse_rings.py` (community detection + ring scoring); cohort/retention + a mock A/B test.
-11. **Write up** — README results + a dashboard screenshot; then add the honest CV lines (dbt, BigQuery, Metabase, Looker Studio) to the Data domain CV.
+11. **Write up** — README results + a dashboard screenshot; then add the honest CV lines (dbt, BigQuery, Looker Studio) to the Data domain CV.
 
 Keep it honest: only add a tool to the CV once you've genuinely used it here.

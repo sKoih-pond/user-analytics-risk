@@ -1,4 +1,4 @@
-# Warehouse: DuckDB (file-based, no server). Metabase (BI) is optional/later via Docker.
+# Warehouse: DuckDB (file-based, no server).
 duckdb>=1.1
 dbt-core>=1.7
 dbt-duckdb>=1.7

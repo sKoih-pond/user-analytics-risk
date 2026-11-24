@@ -18,7 +18,7 @@ no billing. The steps below reproduce or extend it (the dbt marts must exist on 
 3. (Optional) For the tag-effectiveness and segment charts you can add a **Custom Query**
    data source instead, pasting the SQL below — it does the aggregation server-side.
 
-## Charts (mirror the Metabase board and the PNGs in docs/charts/)
+## Charts (mirror the PNGs in docs/charts/)
 
 **1. Segment overview** — table on `user_risk_profile`
 - Dimension: `segment`. Metrics: Record Count, AVG `monetary`, AVG `frequency`, AVG `fraud_rate`.
